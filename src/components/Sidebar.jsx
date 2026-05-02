@@ -1,0 +1,52 @@
+import React from 'react'
+import { PRIORITY_CONFIG } from '../data/candidates.js'
+
+const REGION_ORDER  = ['Middle Basin','Upper Basin','Lower Valley','Xieng Khouang Highland']
+const REGION_LABELS = { 'Middle Basin':'중부 유역','Upper Basin':'상류 유역','Lower Valley':'하류 계곡','Xieng Khouang Highland':'시엥쿠앙 고원' }
+
+export default function Sidebar({ candidates, selected, onSelect }) {
+  const grouped = REGION_ORDER.reduce((acc, r) => { acc[r] = candidates.filter(c => c.region === r); return acc }, {})
+
+  return (
+    <div style={{ width:250, background:'var(--bg-panel)', borderRight:'1px solid var(--border)', display:'flex', flexDirection:'column', overflow:'hidden', flexShrink:0 }}>
+      <div style={{ padding:'14px 18px 10px', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
+        <div style={{ fontSize:11, fontFamily:'var(--font-mono)', color:'var(--text-sec)', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:4 }}>후보지 목록</div>
+        <div style={{ fontSize:12, color:'var(--text-pri)', opacity:0.7, marginBottom:6 }}>총 {candidates.length}개 · 클릭하여 선택</div>
+        <div style={{ fontSize:10, color:'#BA7517', fontFamily:'var(--font-mono)', lineHeight:1.5 }}>
+          기준: 상류 저수량 ≥ 5Mm³
+        </div>
+      </div>
+      <div style={{ overflow:'auto', flex:1 }}>
+        {REGION_ORDER.map(region => {
+          const items = grouped[region]
+          if (!items?.length) return null
+          return (
+            <div key={region}>
+              <div style={{ padding:'12px 18px 6px', fontSize:11, color:'var(--text-sec)', fontFamily:'var(--font-mono)', letterSpacing:'0.1em', textTransform:'uppercase', borderTop:'1px solid var(--border)' }}>
+                {REGION_LABELS[region]}
+              </div>
+              {items.map(c => {
+                const cfg = PRIORITY_CONFIG[c.priority]
+                const isSel = selected?.id === c.id
+                return (
+                  <div key={c.id} onClick={() => onSelect(c)} style={{ padding:'13px 16px', cursor:'pointer', background: isSel ? 'var(--bg-hover)' : 'transparent', borderLeft: isSel ? `3px solid ${cfg.color}` : '3px solid transparent', transition:'all 0.15s', display:'flex', flexDirection:'column', gap:6 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      <span style={{ fontFamily:'var(--font-mono)', fontSize:16, fontWeight:700, color: isSel ? cfg.color : 'var(--text-pri)' }}>{c.id}</span>
+                      <span style={{ fontSize:11, padding:'2px 9px', background:`${cfg.color}22`, color:cfg.color, border:`1px solid ${cfg.color}66`, borderRadius:10, fontFamily:'var(--font-mono)', fontWeight:700 }}>{c.priority}</span>
+                    </div>
+                    <div style={{ fontSize:12, color:'var(--text-pri)', fontFamily:'var(--font-mono)', opacity:0.75 }}>
+                      Bed {c.bed}m · V {c.baseV.toLocaleString()} Mm³
+                    </div>
+                    <div style={{ fontSize:10, color: c.hMin5 <= 60 ? '#1D9E75' : c.hMin5 <= 90 ? '#BA7517' : '#E05C5C', fontFamily:'var(--font-mono)' }}>
+                      5Mm³: H≥{c.hMin5}m {c.hMin5 <= 60 ? '✓' : c.hMin5 <= 90 ? '△' : '⚠'}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}

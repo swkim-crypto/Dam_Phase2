@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nam Ngiao Basin — Dam Analysis System v2</title>
+
+  <!-- Cesium.js -->
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg:        #080e14;
+      --panel:     #0d1a24;
+      --border:    #1a3a52;
+      --accent:    #00d4ff;
+      --accent2:   #00ff88;
+      --warn:      #ffcc00;
+      --text:      #c8dde8;
+      --text-dim:  #4a6a7a;
+      --op-green:  #00ff88;
+      --con-yellow:#ffcc00;
+      --pln-gray:  #7a9ab0;
+      --danger:    #ff4444;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans KR', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    /* ── CESIUM CONTAINER ── */
+    #cesiumContainer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── TOP BAR ── */
+    #topbar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 52px;
+      background: linear-gradient(90deg, rgba(8,14,20,0.97) 60%, rgba(8,14,20,0.7));
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 24px;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+
+    #topbar .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 3px;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    #topbar .logo span { color: var(--accent2); }
+
+    #topbar .version {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: 2px;
+    }
+
+    .topbar-nav {
+      display: flex;
+      gap: 4px;
+      margin-left: auto;
+    }
+
+    .topbar-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 11px;
+      padding: 5px 14px;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+    .topbar-btn:hover, .topbar-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(0,212,255,0.07);
+    }
+
+    /* ── LEFT PANEL ── */
+    #leftPanel {
+      position: absolute;
+      top: 52px;
+      left: 0;
+      width: 300px;
+      height: calc(100vh - 52px);
+      background: rgba(8,14,20,0.92);
+      border-right: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      z-index: 90;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+
+    #leftPanel.collapsed { transform: translateX(-300px); }
+
+    .panel-header {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    /* 댐 목록 */
+    #damList {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    #damList::-webkit-scrollbar { width: 3px; }
+    #damList::-webkit-scrollbar-track { background: transparent; }
+    #damList::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .dam-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 16px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-left: 2px solid transparent;
+    }
+
+    .dam-item:hover { background: rgba(0,212,255,0.06); border-left-color: var(--accent); }
+    .dam-item.active { background: rgba(0,212,255,0.1); border-left-color: var(--accent); }
+
+    .dam-status {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-op  { background: var(--op-green); box-shadow: 0 0 6px var(--op-green); }
+    .status-con { background: var(--con-yellow); box-shadow: 0 0 6px var(--con-yellow); }
+    .status-pln { background: var(--pln-gray); }
+
+    .dam-info { flex: 1; min-width: 0; }
+    .dam-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .dam-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 1px;
+    }
+
+    .dam-mw {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--accent2);
+      flex-shrink: 0;
+    }
+
+    /* 범례 */
+    .legend {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 16px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+    .legend-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+    }
+
+    /* ── RIGHT PANEL (상세 정보) ── */
+    #rightPanel {
+      position: absolute;
+      top: 52px;
+      right: 0;
+      width: 280px;
+      background: rgba(8,14,20,0.93);
+      border-left: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      z-index: 90;
+      transform: translateX(280px);
+      transition: transform 0.3s ease;
+      max-height: calc(100vh - 52px);
+      overflow-y: auto;
+    }
+    #rightPanel.open { transform: translateX(0); }
+
+    .detail-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .detail-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 2px;
+      color: var(--accent);
+      line-height: 1.1;
+    }
+    .detail-status {
+      font-size: 10px;
+      margin-top: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .detail-body { padding: 12px 16px; }
+
+    .spec-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(26,58,82,0.5);
+    }
+    .spec-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.5px;
+    }
+    .spec-value {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .spec-value.highlight { color: var(--accent2); font-size: 14px; }
+
+    .detail-close {
+      position: absolute;
+      top: 12px; right: 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      width: 24px; height: 24px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 2px;
+    }
+    .detail-close:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* ── BOTTOM STATUS ── */
+    #statusBar {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 28px;
+      background: rgba(8,14,20,0.95);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 24px;
+      z-index: 100;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    #statusBar .stat { display: flex; gap: 6px; }
+    #statusBar .stat span { color: var(--accent); }
+
+    #coordDisplay { margin-left: auto; }
+
+    /* ── TOGGLE PANEL BTN ── */
+    #togglePanel {
+      position: absolute;
+      top: 62px;
+      left: 300px;
+      width: 20px; height: 60px;
+      background: rgba(13,26,36,0.9);
+      border: 1px solid var(--border);
+      border-left: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      font-size: 10px;
+      z-index: 95;
+      transition: left 0.3s ease;
+      border-radius: 0 4px 4px 0;
+    }
+    #togglePanel:hover { color: var(--accent); border-color: var(--accent); }
+    #togglePanel.collapsed { left: 0; }
+
+    /* ── PHASE2 배지 ── */
+    .phase-badge {
+      position: absolute;
+      top: 62px;
+      right: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--warn);
+      border: 1px solid var(--warn);
+      padding: 3px 8px;
+      border-radius: 2px;
+      opacity: 0.7;
+      z-index: 90;
+    }
+
+    /* ── LOADING ── */
+    #loading {
+      position: absolute;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      gap: 16px;
+      transition: opacity 0.8s ease;
+    }
+    #loading.fade { opacity: 0; pointer-events: none; }
+
+    .load-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      letter-spacing: 6px;
+      color: var(--accent);
+    }
+    .load-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+    }
+    .load-bar {
+      width: 240px;
+      height: 2px;
+      background: var(--border);
+      border-radius: 1px;
+      overflow: hidden;
+    }
+    .load-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      animation: loading 2s ease forwards;
+    }
+    @keyframes loading {
+      from { width: 0; }
+      to   { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 로딩 화면 -->
+<div id="loading">
+  <div class="load-title">NAM NGIAO</div>
+  <div class="load-sub">DAM ANALYSIS SYSTEM · PHASE 2</div>
+  <div class="load-bar"><div class="load-bar-fill"></div></div>
+  <div class="load-sub" style="font-size:9px; margin-top:4px">INITIALIZING CESIUM 3D TERRAIN...</div>
+</div>
+
+<!-- Cesium 뷰어 -->
+<div id="cesiumContainer"></div>
+
+<!-- 상단 바 -->
+<div id="topbar">
+  <div class="logo">NAM <span>NGIAO</span> BASIN</div>
+  <div class="version">v2.0 · PHASE2</div>
+  <div class="topbar-nav">
+    <button class="topbar-btn active" onclick="setView('basin')">유역 전체</button>
+    <button class="topbar-btn" onclick="setView('ngiep1')">Nam Ngiep 1</button>
+    <button class="topbar-btn" onclick="setView('north')">북부</button>
+    <button class="topbar-btn" onclick="setView('south')">남부</button>
+    <button class="topbar-btn" id="terrainBtn" onclick="toggleTerrain()">🏔 지형 ON</button>
+  </div>
+</div>
+
+<!-- 패널 토글 버튼 -->
+<button id="togglePanel" onclick="toggleLeftPanel()">◀</button>
+
+<!-- 왼쪽 패널 -->
+<div id="leftPanel">
+  <div class="panel-header">DAM LIST · 남능지아오 유역 (Nam Ngiao)</div>
+  <div id="damList"></div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--op-green)"></div>운행중</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--con-yellow)"></div>건설중</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--pln-gray)"></div>계획중</div>
+  </div>
+</div>
+
+<!-- 오른쪽 상세 패널 -->
+<div id="rightPanel">
+  <button class="detail-close" onclick="closeDetail()">✕</button>
+  <div class="detail-header">
+    <div class="detail-title" id="detailName">—</div>
+    <div class="detail-status" id="detailStatus"></div>
+  </div>
+  <div class="detail-body" id="detailBody"></div>
+</div>
+
+<!-- Phase2 배지 -->
+<div class="phase-badge">⚡ GEE 연동 준비중</div>
+
+<!-- 하단 상태바 -->
+<div id="statusBar">
+  <div class="stat">댐: <span>14</span></div>
+  <div class="stat">운행: <span>9</span></div>
+  <div class="stat">총발전: <span>705 MW</span></div>
+  <div class="stat">유역: <span>4,013 km²</span></div>
+  <div id="coordDisplay">LAT — · LON —</div>
+</div>
+
+<script>
+// ── 댐 데이터 ──
+const DAMS = [
+  { id:'nn1',   name:'Nam Ngiep 1',          status:'op',  year:2019, h:167,  l:530,   el:320,  vol:2227, mw:272,  lat:18.3500, lon:103.0667, river:'Nam Ngiep',   note:'유역 최대 댐 · K-water 참여' },
+  { id:'nn1r',  name:'Nam Ngiep 1 Re-Reg',   status:'op',  year:2019, h:20,   l:90,    el:179,  vol:4.6,  mw:15,   lat:18.3200, lon:103.0850, river:'Nam Ngiep',   note:'하류 방류량 재조정' },
+  { id:'nn2',   name:'Nam Ngiep 2',           status:'op',  year:2015, h:70.5, l:500,   el:491,  vol:163,  mw:180,  lat:19.0167, lon:102.7833, river:'Nam Ngiep',   note:'' },
+  { id:'nn2a',  name:'Nam Ngiep 2A',          status:'op',  year:null, h:35,   l:180,   el:560,  vol:5.5,  mw:15,   lat:18.8833, lon:102.8167, river:'Nam Ngiep',   note:'' },
+  { id:'nn2b',  name:'Nam Ngiep 2B',          status:'con', year:2018, h:30,   l:150,   el:505,  vol:3.2,  mw:10,   lat:18.9167, lon:102.9000, river:'Nam Ngiep',   note:'건설중' },
+  { id:'nn2c',  name:'Nam Ngiep 2C',          status:'op',  year:2017, h:32,   l:165,   el:445,  vol:4.1,  mw:15,   lat:18.9500, lon:103.0000, river:'Nam Ngiep',   note:'' },
+  { id:'nn3a',  name:'Nam Ngiep 3A',          status:'op',  year:2014, h:40,   l:210,   el:610,  vol:1.8,  mw:44,   lat:19.2333, lon:103.1667, river:'Nam Ngiep',   note:'' },
+  { id:'nc1',   name:'Nam Chian 1',           status:'op',  year:2018, h:93,   l:294.5, el:1060, vol:14,   mw:104,  lat:18.9667, lon:103.5167, river:'Nam Chian',   note:'지류 댐' },
+  { id:'nche1', name:'Nam Che 1',             status:'op',  year:2019, h:50,   l:155,   el:1062, vol:2.5,  mw:15,   lat:18.8167, lon:103.5500, river:'Nam Che',     note:'' },
+  { id:'nstl',  name:'Nam Sen-Tad Lang',      status:'op',  year:2016, h:45,   l:200,   el:520,  vol:12.5, mw:30,   lat:19.2500, lon:102.5000, river:'Nam Sen',     note:'' },
+  { id:'nko',   name:'Nam Ko',                status:'pln', year:2017, h:35,   l:180,   el:null, vol:null, mw:'1.5~5', lat:19.5333, lon:103.0167, river:'Nam Ko',  note:'소수력' },
+  { id:'nph',   name:'Nam Phoun',             status:'pln', year:null, h:null, l:null,  el:null, vol:null, mw:null, lat:18.5500, lon:102.7167, river:'Nam Phoun',   note:'계획중' },
+  { id:'nanp',  name:'Nam Ao-Nam Pot',        status:'con', year:null, h:null, l:null,  el:null, vol:null, mw:null, lat:18.8333, lon:102.5833, river:'Nam Ao',      note:'건설중' },
+  { id:'nche',  name:'Nam Chein',             status:'pln', year:null, h:null, l:null,  el:null, vol:null, mw:null, lat:19.3500, lon:103.2000, river:'Nam Chein',   note:'계획중' },
+];
+
+const STATUS_LABEL = { op:'🟢 운행중', con:'🟡 건설중', pln:'⚪ 계획중' };
+const STATUS_COLOR = { op:'#00ff88', con:'#ffcc00', pln:'#7a9ab0' };
+
+// ── Cesium 초기화 ──
+// ⚠️ 실제 배포 시 Cesium ion 토큰을 환경변수로 교체하세요
+Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiZWFiYWFkNS0zNTJkLTQ4OWYtOWQ5Zi0wMTM3ZGE1YWJmYjgiLCJpZCI6MjU4NTY1LCJpYXQiOjE3MzI3NjE0Nzh9.JEVw7db3BPwHzMAT2Z77VSaF_FX7J0H-xM7MB9A0Mfo';
+
+const viewer = new Cesium.Viewer('cesiumContainer', {
+  terrain: Cesium.Terrain.fromWorldTerrain(),
+  baseLayerPicker: false,
+  geocoder: false,
+  homeButton: false,
+  sceneModePicker: false,
+  navigationHelpButton: false,
+  animation: false,
+  timeline: false,
+  fullscreenButton: false,
+  infoBox: false,
+  selectionIndicator: false,
+  shadows: false,
+  shouldAnimate: false,
+});
+
+// 대기 효과
+viewer.scene.skyAtmosphere.show = true;
+viewer.scene.fog.enabled = true;
+viewer.scene.globe.enableLighting = true;
+
+let terrainOn = true;
+
+// ── 댐 마커 추가 ──
+const entities = {};
+
+DAMS.forEach(dam => {
+  const color = STATUS_COLOR[dam.status];
+  const height = dam.h || 30;
+
+  // 실린더 (댐 본체 상징)
+  const entity = viewer.entities.add({
+    name: dam.name,
+    position: Cesium.Cartesian3.fromDegrees(dam.lon, dam.lat, height / 2),
+    cylinder: {
+      length: height,
+      topRadius: 0,
+      bottomRadius: Math.max(height * 0.4, 500),
+      material: Cesium.Color.fromCssColorString(color).withAlpha(0.75),
+      outline: true,
+      outlineColor: Cesium.Color.fromCssColorString(color),
+    },
+    label: {
+      text: dam.name,
+      font: '11px "Noto Sans KR"',
+      fillColor: Cesium.Color.fromCssColorString(color),
+      outlineColor: Cesium.Color.BLACK,
+      outlineWidth: 2,
+      style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+      pixelOffset: new Cesium.Cartesian2(0, -height - 10),
+      distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 200000),
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+    },
+  });
+
+  entities[dam.id] = entity;
+});
+
+// ── 왼쪽 패널 댐 목록 렌더링 ──
+const damList = document.getElementById('damList');
+
+DAMS.forEach(dam => {
+  const item = document.createElement('div');
+  item.className = 'dam-item';
+  item.dataset.id = dam.id;
+
+  const mwText = dam.mw ? `${dam.mw} MW` : '—';
+
+  item.innerHTML = `
+    <div class="dam-status status-${dam.status}"></div>
+    <div class="dam-info">
+      <div class="dam-name">${dam.name}</div>
+      <div class="dam-sub">${dam.river} · ${dam.year || '계획중'}</div>
+    </div>
+    <div class="dam-mw">${mwText}</div>
+  `;
+
+  item.addEventListener('click', () => {
+    flyToDam(dam);
+    showDetail(dam);
+    document.querySelectorAll('.dam-item').forEach(el => el.classList.remove('active'));
+    item.classList.add('active');
+  });
+
+  damList.appendChild(item);
+});
+
+// ── 댐으로 카메라 이동 ──
+function flyToDam(dam) {
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(dam.lon, dam.lat, 15000),
+    orientation: { pitch: Cesium.Math.toRadians(-35), heading: 0, roll: 0 },
+    duration: 2.5,
+    easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
+  });
+}
+
+// ── 상세 패널 표시 ──
+function showDetail(dam) {
+  document.getElementById('detailName').textContent = dam.name;
+  document.getElementById('detailStatus').innerHTML =
+    `<span style="color:${STATUS_COLOR[dam.status]}">${STATUS_LABEL[dam.status]}</span>` +
+    (dam.year ? ` · ${dam.year}` : '');
+
+  const rows = [
+    ['하천', dam.river],
+    ['높이', dam.h ? `${dam.h} m` : '—'],
+    ['길이', dam.l ? `${dam.l} m` : '—'],
+    ['만수위', dam.el ? `EL. ${dam.el} m` : '—'],
+    ['저수량', dam.vol ? `${dam.vol} 백만 m³` : '—'],
+    ['발전용량', dam.mw ? `${dam.mw} MW` : '—', true],
+    ['비고', dam.note || '—'],
+  ];
+
+  document.getElementById('detailBody').innerHTML = rows.map(([label, val, hl]) => `
+    <div class="spec-row">
+      <span class="spec-label">${label}</span>
+      <span class="spec-value ${hl ? 'highlight' : ''}">${val}</span>
+    </div>
+  `).join('');
+
+  document.getElementById('rightPanel').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('rightPanel').classList.remove('open');
+  document.querySelectorAll('.dam-item').forEach(el => el.classList.remove('active'));
+}
+
+// ── 뷰 프리셋 ──
+const VIEWS = {
+  basin: { lon:103.0, lat:18.9, alt:120000, tilt:-40 },
+  ngiep1: { lon:103.0667, lat:18.35, alt:12000, tilt:-35 },
+  north: { lon:103.0, lat:19.3, alt:80000, tilt:-40 },
+  south: { lon:103.0, lat:18.4, alt:60000, tilt:-40 },
+};
+
+function setView(key) {
+  const v = VIEWS[key];
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(v.lon, v.lat, v.alt),
+    orientation: { pitch: Cesium.Math.toRadians(v.tilt), heading: 0, roll: 0 },
+    duration: 2,
+  });
+  document.querySelectorAll('.topbar-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+// ── 지형 토글 ──
+async function toggleTerrain() {
+  terrainOn = !terrainOn;
+  viewer.terrainProvider = terrainOn
+    ? await Cesium.createWorldTerrainAsync()
+    : new Cesium.EllipsoidTerrainProvider();
+  document.getElementById('terrainBtn').textContent = `🏔 지형 ${terrainOn ? 'ON' : 'OFF'}`;
+}
+
+// ── 좌표 표시 ──
+const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+handler.setInputAction(movement => {
+  const ray = viewer.camera.getPickRay(movement.endPosition);
+  const pos = viewer.scene.globe.pick(ray, viewer.scene);
+  if (pos) {
+    const carto = Cesium.Cartographic.fromCartesian(pos);
+    const lat = Cesium.Math.toDegrees(carto.latitude).toFixed(4);
+    const lon = Cesium.Math.toDegrees(carto.longitude).toFixed(4);
+    document.getElementById('coordDisplay').textContent = `LAT ${lat}° · LON ${lon}°`;
+  }
+}, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+// ── 클릭으로 댐 선택 ──
+handler.setInputAction(click => {
+  const picked = viewer.scene.pick(click.position);
+  if (picked && picked.id) {
+    const dam = DAMS.find(d => entities[d.id] === picked.id);
+    if (dam) showDetail(dam);
+  }
+}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+// ── 패널 토글 ──
+function toggleLeftPanel() {
+  const panel = document.getElementById('leftPanel');
+  const btn = document.getElementById('togglePanel');
+  panel.classList.toggle('collapsed');
+  btn.classList.toggle('collapsed');
+  btn.textContent = panel.classList.contains('collapsed') ? '▶' : '◀';
+}
+
+// ── 초기 카메라 위치 (유역 전체) ──
+viewer.camera.setView({
+  destination: Cesium.Cartesian3.fromDegrees(103.0, 18.9, 130000),
+  orientation: { pitch: Cesium.Math.toRadians(-42), heading: 0, roll: 0 },
+});
+
+// ── 로딩 화면 제거 ──
+viewer.scene.globe.tileLoadProgressEvent.addEventListener(remaining => {
+  if (remaining === 0) {
+    setTimeout(() => {
+      document.getElementById('loading').classList.add('fade');
+      setTimeout(() => document.getElementById('loading').remove(), 900);
+    }, 600);
+  }
+});
+</script>
+</body>
+</html>
