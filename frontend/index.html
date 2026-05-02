@@ -498,31 +498,42 @@ const entities = {};
 
 DAMS.forEach(dam => {
   const color = STATUS_COLOR[dam.status];
-  const height = dam.h || 30;
+  const damHeight = (dam.h || 30) * 80; // 실제 높이 × 80배 → 지형 위에서 눈에 띄게
 
-  // 실린더 (댐 본체 상징)
+  // 지형 위 고정 위치
+  const position = Cesium.Cartesian3.fromDegrees(dam.lon, dam.lat);
+
+  // 실린더 (댐 본체)
   const entity = viewer.entities.add({
     name: dam.name,
-    position: Cesium.Cartesian3.fromDegrees(dam.lon, dam.lat, height / 2),
+    position: new Cesium.CallbackProperty(() => {
+      const carto = Cesium.Cartographic.fromDegrees(dam.lon, dam.lat);
+      const terrainHeight = viewer.scene.globe.getHeight(carto) || 0;
+      return Cesium.Cartesian3.fromDegrees(dam.lon, dam.lat, terrainHeight + damHeight / 2);
+    }, false),
     cylinder: {
-      length: height,
+      length: damHeight,
       topRadius: 0,
-      bottomRadius: Math.max(height * 0.4, 500),
-      material: Cesium.Color.fromCssColorString(color).withAlpha(0.75),
+      bottomRadius: Math.max(damHeight * 0.15, 1500),
+      material: Cesium.Color.fromCssColorString(color).withAlpha(0.85),
       outline: true,
-      outlineColor: Cesium.Color.fromCssColorString(color),
+      outlineColor: Cesium.Color.WHITE.withAlpha(0.6),
+      outlineWidth: 2,
     },
     label: {
       text: dam.name,
-      font: '11px "Noto Sans KR"',
-      fillColor: Cesium.Color.fromCssColorString(color),
+      font: 'bold 14px "Noto Sans KR"',
+      fillColor: Cesium.Color.WHITE,
       outlineColor: Cesium.Color.BLACK,
-      outlineWidth: 2,
+      outlineWidth: 3,
       style: Cesium.LabelStyle.FILL_AND_OUTLINE,
       verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-      pixelOffset: new Cesium.Cartesian2(0, -height - 10),
-      distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 200000),
+      pixelOffset: new Cesium.Cartesian2(0, -20),
+      distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 300000),
       disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      showBackground: true,
+      backgroundColor: Cesium.Color.fromCssColorString(color).withAlpha(0.7),
+      backgroundPadding: new Cesium.Cartesian2(8, 4),
     },
   });
 
