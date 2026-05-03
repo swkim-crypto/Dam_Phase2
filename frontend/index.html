@@ -401,7 +401,6 @@
   <div class="version">v2.0 · PHASE2</div>
   <div class="topbar-nav">
     <button class="topbar-btn active" onclick="setView('basin')">유역 전체</button>
-    <button class="topbar-btn" onclick="setView('ngiep1')">Nam Ngiep 1</button>
     <button class="topbar-btn" onclick="setView('north')">북부</button>
     <button class="topbar-btn" onclick="setView('south')">남부</button>
     <button class="topbar-btn" id="terrainBtn" onclick="toggleTerrain()">🏔 지형 ON</button>
@@ -413,12 +412,12 @@
 
 <!-- 왼쪽 패널 -->
 <div id="leftPanel">
-  <div class="panel-header">DAM LIST · 남능지아오 유역 (Nam Ngiao)</div>
+  <div class="panel-header">DAM CANDIDATES · 남능지아오 유역 (Nam Ngiao)</div>
   <div id="damList"></div>
   <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:var(--op-green)"></div>운행중</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--con-yellow)"></div>건설중</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--pln-gray)"></div>계획중</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--op-green)"></div>최우선</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--con-yellow)"></div>2순위</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--pln-gray)"></div>검토필요</div>
   </div>
 </div>
 
@@ -437,38 +436,56 @@
 
 <!-- 하단 상태바 -->
 <div id="statusBar">
-  <div class="stat">댐: <span>14</span></div>
-  <div class="stat">운행: <span>9</span></div>
-  <div class="stat">총발전: <span>705 MW</span></div>
+  <div class="stat">후보지: <span>8</span></div>
+  <div class="stat">최우선: <span>3</span></div>
+  <div class="stat">2순위: <span>3</span></div>
   <div class="stat">유역: <span>4,013 km²</span></div>
   <div id="coordDisplay">LAT — · LON —</div>
 </div>
 
 <script>
-// ── 댐 데이터 ──
+// ── S1~S9 댐 후보지 데이터 (dnr_v2.kml 기반) ──
 const DAMS = [
-  { id:'nn1',   name:'Nam Ngiep 1',          status:'op',  year:2019, h:167,  l:530,   el:320,  vol:2227, mw:272,  lat:18.3500, lon:103.0667, river:'Nam Ngiep',   note:'유역 최대 댐 · K-water 참여' },
-  { id:'nn1r',  name:'Nam Ngiep 1 Re-Reg',   status:'op',  year:2019, h:20,   l:90,    el:179,  vol:4.6,  mw:15,   lat:18.3200, lon:103.0850, river:'Nam Ngiep',   note:'하류 방류량 재조정' },
-  { id:'nn2',   name:'Nam Ngiep 2',           status:'op',  year:2015, h:70.5, l:500,   el:491,  vol:163,  mw:180,  lat:19.0167, lon:102.7833, river:'Nam Ngiep',   note:'' },
-  { id:'nn2a',  name:'Nam Ngiep 2A',          status:'op',  year:null, h:35,   l:180,   el:560,  vol:5.5,  mw:15,   lat:18.8833, lon:102.8167, river:'Nam Ngiep',   note:'' },
-  { id:'nn2b',  name:'Nam Ngiep 2B',          status:'con', year:2018, h:30,   l:150,   el:505,  vol:3.2,  mw:10,   lat:18.9167, lon:102.9000, river:'Nam Ngiep',   note:'건설중' },
-  { id:'nn2c',  name:'Nam Ngiep 2C',          status:'op',  year:2017, h:32,   l:165,   el:445,  vol:4.1,  mw:15,   lat:18.9500, lon:103.0000, river:'Nam Ngiep',   note:'' },
-  { id:'nn3a',  name:'Nam Ngiep 3A',          status:'op',  year:2014, h:40,   l:210,   el:610,  vol:1.8,  mw:44,   lat:19.2333, lon:103.1667, river:'Nam Ngiep',   note:'' },
-  { id:'nc1',   name:'Nam Chian 1',           status:'op',  year:2018, h:93,   l:294.5, el:1060, vol:14,   mw:104,  lat:18.9667, lon:103.5167, river:'Nam Chian',   note:'지류 댐' },
-  { id:'nche1', name:'Nam Che 1',             status:'op',  year:2019, h:50,   l:155,   el:1062, vol:2.5,  mw:15,   lat:18.8167, lon:103.5500, river:'Nam Che',     note:'' },
-  { id:'nstl',  name:'Nam Sen-Tad Lang',      status:'op',  year:2016, h:45,   l:200,   el:520,  vol:12.5, mw:30,   lat:19.2500, lon:102.5000, river:'Nam Sen',     note:'' },
-  { id:'nko',   name:'Nam Ko',                status:'pln', year:2017, h:35,   l:180,   el:null, vol:null, mw:'1.5~5', lat:19.5333, lon:103.0167, river:'Nam Ko',  note:'소수력' },
-  { id:'nph',   name:'Nam Phoun',             status:'pln', year:null, h:null, l:null,  el:null, vol:null, mw:null, lat:18.5500, lon:102.7167, river:'Nam Phoun',   note:'계획중' },
-  { id:'nanp',  name:'Nam Ao-Nam Pot',        status:'con', year:null, h:null, l:null,  el:null, vol:null, mw:null, lat:18.8333, lon:102.5833, river:'Nam Ao',      note:'건설중' },
-  { id:'nche',  name:'Nam Chein',             status:'pln', year:null, h:null, l:null,  el:null, vol:null, mw:null, lat:19.3500, lon:103.2000, river:'Nam Chein',   note:'계획중' },
+  { id:'S1', name:'S1', priority:'검토필요', lat:18.4437, lon:103.58278,
+    elBase:138, elTop:198, vol:4834, note:'하천흐름 90° · 댐축 180°',
+    wall:[[103.58278,18.446452702702402,198],[103.58278,18.441047297296997,198],[103.58278,18.44212837837808,138],[103.58278,18.44537162162132,138],[103.58278,18.446452702702402,198]]
+  },
+  { id:'S2', name:'S2', priority:'검토필요', lat:18.63667, lon:103.602083,
+    elBase:143, elTop:203, vol:5928, note:'하천흐름 180° · 댐축 270°',
+    wall:[[103.6047860360357,18.63667,203],[103.5993806306303,18.63667,203],[103.60046171171138,18.63667,143],[103.60370495495462,18.63667,143],[103.6047860360357,18.63667,203]]
+  },
+  { id:'S3', name:'S3', priority:'최우선', lat:18.93056, lon:103.543749,
+    elBase:329, elTop:389, vol:3277, note:'하천흐름 0° · 댐축 90°',
+    wall:[[103.54104729729629,18.93056,389],[103.5464527027017,18.93056,389],[103.54537162162062,18.93056,329],[103.54212837837737,18.93056,329],[103.54104729729629,18.93056,389]]
+  },
+  { id:'S4', name:'S4', priority:'최우선', lat:18.78125, lon:103.51222,
+    elBase:259, elTop:319, vol:3114, note:'하천흐름 90° · 댐축 180°',
+    wall:[[103.51222,18.783952702702404,319],[103.51222,18.778547297297,319],[103.51222,18.77962837837808,259],[103.51222,18.78287162162132,259],[103.51222,18.783952702702404,319]]
+  },
+  { id:'S5', name:'S5', priority:'최우선', lat:19.034028, lon:103.407638,
+    elBase:267, elTop:327, vol:443, note:'하천흐름 135° · 댐축 225° · H≥120m',
+    wall:[[103.40954943274134,19.035939432741387,327],[103.40572723392411,19.03211723392416,327],[103.40649167368755,19.032881673687605,267],[103.4087849929779,19.035174992977943,267],[103.40954943274134,19.035939432741387,327]]
+  },
+  { id:'S6', name:'S6', priority:'2순위', lat:19.286389, lon:103.188609,
+    elBase:989, elTop:1049, vol:1398, note:'하천흐름 135° · 댐축 225° · H≥100m',
+    wall:[[103.19052109940829,19.288301099408255,1049],[103.18669890059105,19.28447890059103,1049],[103.1874633403545,19.285243340354473,989],[103.18975665964484,19.28753665964481,989],[103.19052109940829,19.288301099408255,1049]]
+  },
+  { id:'S7', name:'S7', priority:'2순위', lat:19.137916, lon:103.185417,
+    elBase:548, elTop:608, vol:1371, note:'하천흐름 135° · 댐축 225° · H≥120m',
+    wall:[[103.18732832163384,19.139827210519346,608],[103.18350612281661,19.13600501170212,608],[103.18427056258005,19.136769451465565,548],[103.1865638818704,19.139062770755903,548],[103.18732832163384,19.139827210519346,608]]
+  },
+  { id:'S9', name:'S9', priority:'2순위', lat:19.207776, lon:103.538056,
+    elBase:1144, elTop:1204, vol:2114, note:'하천흐름 135° · 댐축 225° · H≥90m',
+    wall:[[103.53996776607488,19.20968776607493,1204],[103.53614556725765,19.205865567257703,1204],[103.53691000702109,19.206630007021147,1144],[103.53920332631144,19.208923326311485,1144],[103.53996776607488,19.20968776607493,1204]]
+  },
 ];
 
-const STATUS_LABEL = { op:'🟢 운행중', con:'🟡 건설중', pln:'⚪ 계획중' };
-const STATUS_COLOR = { op:'#00ff88', con:'#ffcc00', pln:'#7a9ab0' };
+const PRIORITY_LABEL = { '최우선':'🟢 최우선', '2순위':'🟡 2순위', '검토필요':'⚪ 검토필요' };
+const STATUS_COLOR   = { '최우선':'#00ff88',   '2순위':'#ffcc00',  '검토필요':'#7a9ab0' };
 
 // ── Cesium 초기화 ──
 // ⚠️ 실제 배포 시 Cesium ion 토큰을 환경변수로 교체하세요
-Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiZWFiYWFkNS0zNTJkLTQ4OWYtOWQ5Zi0wMTM3ZGE1YWJmYjgiLCJpZCI6MjU4NTY1LCJpYXQiOjE3MzI3NjE0Nzh9.JEVw7db3BPwHzMAT2Z77VSaF_FX7J0H-xM7MB9A0Mfo';
+Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMDA1LTQ0MTEtOGI4OS01NjI3YjgzOGQ4ZmEiLCJpZCI6MTU3LCJpYXQiOjE1MTgxNzM0MTJ9.PGEzxBnx-SqKMPjQUCkw0MBiCt7LDz5bqJfxAfBgLxk';
 
 const viewer = new Cesium.Viewer('cesiumContainer', {
   terrain: Cesium.Terrain.fromWorldTerrain(),
@@ -496,74 +513,33 @@ let terrainOn = true;
 // ── 댐 마커 추가 ──
 const entities = {};
 
-// ── KML 기반 댐 벽체 데이터 (dnr_v2.kml에서 추출, absolute 고도) ──
-const DAM_WALLS = [
-  { id:'S1', name:'S1', coords:[
-    [103.58278,18.446452702702402,198],[103.58278,18.441047297296997,198],
-    [103.58278,18.44212837837808,138],[103.58278,18.44537162162132,138],
-    [103.58278,18.446452702702402,198]
-  ]},
-  { id:'S2', name:'S2', coords:[
-    [103.6047860360357,18.63667,203],[103.5993806306303,18.63667,203],
-    [103.60046171171138,18.63667,143],[103.60370495495462,18.63667,143],
-    [103.6047860360357,18.63667,203]
-  ]},
-  { id:'S3', name:'S3', coords:[
-    [103.54104729729629,18.93056,389],[103.5464527027017,18.93056,389],
-    [103.54537162162062,18.93056,329],[103.54212837837737,18.93056,329],
-    [103.54104729729629,18.93056,389]
-  ]},
-  { id:'S4', name:'S4', coords:[
-    [103.51222,18.783952702702404,319],[103.51222,18.778547297297,319],
-    [103.51222,18.77962837837808,259],[103.51222,18.78287162162132,259],
-    [103.51222,18.783952702702404,319]
-  ]},
-  { id:'S5', name:'S5', coords:[
-    [103.40954943274134,19.035939432741387,327],[103.40572723392411,19.03211723392416,327],
-    [103.40649167368755,19.032881673687605,267],[103.4087849929779,19.035174992977943,267],
-    [103.40954943274134,19.035939432741387,327]
-  ]},
-  { id:'S6', name:'S6', coords:[
-    [103.19052109940829,19.288301099408255,1049],[103.18669890059105,19.28447890059103,1049],
-    [103.1874633403545,19.285243340354473,989],[103.18975665964484,19.28753665964481,989],
-    [103.19052109940829,19.288301099408255,1049]
-  ]},
-  { id:'S7', name:'S7', coords:[
-    [103.18732832163384,19.139827210519346,608],[103.18350612281661,19.13600501170212,608],
-    [103.18427056258005,19.136769451465565,548],[103.1865638818704,19.139062770755903,548],
-    [103.18732832163384,19.139827210519346,608]
-  ]},
-  { id:'S9', name:'S9', coords:[
-    [103.53996776607488,19.20968776607493,1204],[103.53614556725765,19.205865567257703,1204],
-    [103.53691000702109,19.206630007021147,1144],[103.53920332631144,19.208923326311485,1144],
-    [103.53996776607488,19.20968776607493,1204]
-  ]},
-];
+// ── 댐 벽체 + 마루선 렌더링 (DAMS.wall 사용) ──
+DAMS.forEach(dam => {
+  const color = STATUS_COLOR[dam.priority];
+  const positions = Cesium.Cartesian3.fromDegreesArrayHeights(dam.wall.flat());
 
-// 댐 벽체 Cesium polygon으로 렌더링
-DAM_WALLS.forEach(wall => {
-  const positions = Cesium.Cartesian3.fromDegreesArrayHeights(wall.coords.flat());
+  // 역사다리꼴 벽체
   viewer.entities.add({
-    name: wall.name + ' 벽체',
+    name: dam.name + ' 벽체',
     polygon: {
       hierarchy: new Cesium.PolygonHierarchy(positions),
-      material: Cesium.Color.fromCssColorString('#00aaff').withAlpha(0.75),
+      material: Cesium.Color.fromCssColorString(color).withAlpha(0.7),
       outline: true,
       outlineColor: Cesium.Color.WHITE,
       outlineWidth: 2,
-      perPositionHeight: true,  // absolute 고도 사용
+      perPositionHeight: true,
       closeTop: true,
       closeBottom: false,
     },
   });
-  // 축선 (댐 마루)
-  const topCoords = [wall.coords[0], wall.coords[1]];
+
+  // 댐 마루선 (상단 두 좌표)
   viewer.entities.add({
-    name: wall.name + ' 마루선',
+    name: dam.name + ' 마루',
     polyline: {
-      positions: Cesium.Cartesian3.fromDegreesArrayHeights(topCoords.flat()),
-      width: 3,
-      material: Cesium.Color.CYAN,
+      positions: Cesium.Cartesian3.fromDegreesArrayHeights(dam.wall.slice(0,2).flat()),
+      width: 4,
+      material: Cesium.Color.WHITE,
       clampToGround: false,
     },
   });
@@ -571,12 +547,12 @@ DAM_WALLS.forEach(wall => {
 
 // ── 기존 댐 목록 라벨 마커 (패널 연동용, 심볼 최소화) ──
 DAMS.forEach(dam => {
-  const color = STATUS_COLOR[dam.status];
+  const color = STATUS_COLOR[dam.priority];
   const entity = viewer.entities.add({
     name: dam.name,
-    position: Cesium.Cartesian3.fromDegrees(dam.lon, dam.lat, 2000),
+    position: Cesium.Cartesian3.fromDegrees(dam.lon, dam.lat, dam.elTop + 500),
     point: {
-      pixelSize: 10,
+      pixelSize: 12,
       color: Cesium.Color.fromCssColorString(color),
       outlineColor: Cesium.Color.WHITE,
       outlineWidth: 2,
@@ -585,18 +561,18 @@ DAMS.forEach(dam => {
     },
     label: {
       text: dam.name,
-      font: 'bold 12px "Noto Sans KR"',
+      font: 'bold 13px "Noto Sans KR"',
       fillColor: Cesium.Color.WHITE,
       outlineColor: Cesium.Color.BLACK,
       outlineWidth: 3,
       style: Cesium.LabelStyle.FILL_AND_OUTLINE,
       verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
       pixelOffset: new Cesium.Cartesian2(0, -14),
-      distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 200000),
+      distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 300000),
       disableDepthTestDistance: Number.POSITIVE_INFINITY,
       showBackground: true,
-      backgroundColor: Cesium.Color.fromCssColorString(color).withAlpha(0.75),
-      backgroundPadding: new Cesium.Cartesian2(7, 4),
+      backgroundColor: Cesium.Color.fromCssColorString(color).withAlpha(0.8),
+      backgroundPadding: new Cesium.Cartesian2(8, 5),
     },
   });
   entities[dam.id] = entity;
@@ -609,16 +585,15 @@ DAMS.forEach(dam => {
   const item = document.createElement('div');
   item.className = 'dam-item';
   item.dataset.id = dam.id;
-
-  const mwText = dam.mw ? `${dam.mw} MW` : '—';
+  const color = STATUS_COLOR[dam.priority];
 
   item.innerHTML = `
-    <div class="dam-status status-${dam.status}"></div>
+    <div class="dam-status" style="background:${color}; box-shadow:0 0 6px ${color}"></div>
     <div class="dam-info">
       <div class="dam-name">${dam.name}</div>
-      <div class="dam-sub">${dam.river} · ${dam.year || '계획중'}</div>
+      <div class="dam-sub">EL.${dam.elBase}~${dam.elTop}m · ${dam.vol.toLocaleString()} Mm³</div>
     </div>
-    <div class="dam-mw">${mwText}</div>
+    <div class="dam-mw" style="color:${color}; font-size:10px">${dam.priority}</div>
   `;
 
   item.addEventListener('click', () => {
@@ -643,19 +618,19 @@ function flyToDam(dam) {
 
 // ── 상세 패널 표시 ──
 function showDetail(dam) {
+  const color = STATUS_COLOR[dam.priority];
   document.getElementById('detailName').textContent = dam.name;
   document.getElementById('detailStatus').innerHTML =
-    `<span style="color:${STATUS_COLOR[dam.status]}">${STATUS_LABEL[dam.status]}</span>` +
-    (dam.year ? ` · ${dam.year}` : '');
+    `<span style="color:${color}">${PRIORITY_LABEL[dam.priority]}</span>`;
 
   const rows = [
-    ['하천', dam.river],
-    ['높이', dam.h ? `${dam.h} m` : '—'],
-    ['길이', dam.l ? `${dam.l} m` : '—'],
-    ['만수위', dam.el ? `EL. ${dam.el} m` : '—'],
-    ['저수량', dam.vol ? `${dam.vol} 백만 m³` : '—'],
-    ['발전용량', dam.mw ? `${dam.mw} MW` : '—', true],
-    ['비고', dam.note || '—'],
+    ['하상고도', `EL. ${dam.elBase} m`],
+    ['만수위',   `EL. ${dam.elTop} m`, false],
+    ['댐 높이',  `${dam.elTop - dam.elBase} m`, false],
+    ['저수량',   `${dam.vol.toLocaleString()} Mm³`, true],
+    ['좌표 (위)', `${dam.lat.toFixed(5)}°N`],
+    ['좌표 (경)', `${dam.lon.toFixed(5)}°E`],
+    ['비고',     dam.note || '—'],
   ];
 
   document.getElementById('detailBody').innerHTML = rows.map(([label, val, hl]) => `
