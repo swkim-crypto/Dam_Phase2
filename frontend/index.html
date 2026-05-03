@@ -6,7 +6,84 @@
   <title>Nam Ngiao Basin — Dam Analysis System v2</title>
 
   <!-- Cesium.js -->
-  <script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"></script>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js">
+// ── 수몰 시뮬레이션 ──
+const BACKEND_URL = 'https://nam-ngiao-backend.onrender.com';
+let currentDamId = null;
+let floodEntities = [];
+
+function runFloodSim() {
+  if (!currentDamId) return;
+  const btn = document.getElementById('floodBtn');
+  const status = document.getElementById('floodStatus');
+
+  btn.textContent = '⏳ GEE 분석중... (30초~1분)';
+  btn.disabled = true;
+  status.textContent = 'SRTM DEM 수몰 마스킹 계산중...';
+
+  fetch(`${BACKEND_URL}/flood-simulation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dam_id: currentDamId })
+  })
+  .then(r => r.json())
+  .then(data => {
+    clearFlood();
+    renderFlood(data);
+    btn.textContent = '💧 수몰 시뮬레이션 실행';
+    btn.disabled = false;
+    status.textContent = `수몰면적: ${data.flood_area_km2} km² | EL.${data.water_level}m`;
+    document.getElementById('floodClearBtn').style.display = 'block';
+  })
+  .catch(err => {
+    btn.textContent = '💧 수몰 시뮬레이션 실행';
+    btn.disabled = false;
+    status.textContent = '오류: ' + err.message;
+  });
+}
+
+function renderFlood(data) {
+  if (!data.geojson || !data.geojson.features) return;
+
+  data.geojson.features.forEach(feature => {
+    if (feature.geometry.type !== 'Polygon') return;
+    const coords = feature.geometry.coordinates[0];
+    const positions = coords.map(c =>
+      Cesium.Cartesian3.fromDegrees(c[0], c[1], data.water_level)
+    );
+    const entity = viewer.entities.add({
+      name: '수몰구역',
+      polygon: {
+        hierarchy: new Cesium.PolygonHierarchy(positions),
+        material: Cesium.Color.fromCssColorString('#0088ff').withAlpha(0.55),
+        outline: false,
+        height: data.water_level,
+        extrudedHeight: data.water_level,
+        perPositionHeight: false,
+      }
+    });
+    floodEntities.push(entity);
+  });
+}
+
+function clearFlood() {
+  floodEntities.forEach(e => viewer.entities.remove(e));
+  floodEntities = [];
+  document.getElementById('floodClearBtn').style.display = 'none';
+  document.getElementById('floodStatus').textContent = '';
+}
+
+// showDetail에서 currentDamId 설정
+const _origShowDetail = showDetail;
+showDetail = function(dam) {
+  currentDamId = dam.id;
+  clearFlood();
+  document.getElementById('floodBtn').textContent = '💧 수몰 시뮬레이션 실행';
+  document.getElementById('floodBtn').disabled = false;
+  _origShowDetail(dam);
+};
+
+</script>
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 
   <!-- Google Fonts -->
@@ -212,12 +289,12 @@
       position: absolute;
       top: 52px;
       right: 0;
-      width: 280px;
+      width: 320px;
       background: rgba(8,14,20,0.93);
       border-left: 1px solid var(--border);
       backdrop-filter: blur(12px);
       z-index: 90;
-      transform: translateX(280px);
+      transform: translateX(320px);
       transition: transform 0.3s ease;
       max-height: calc(100vh - 52px);
       overflow-y: auto;
@@ -261,6 +338,8 @@
       font-weight: 600;
       color: var(--text);
       font-family: 'JetBrains Mono', monospace;
+      text-align: right;
+      word-break: break-all;
     }
     .spec-value.highlight { color: var(--accent2); font-size: 14px; }
 
@@ -429,10 +508,27 @@
     <div class="detail-status" id="detailStatus"></div>
   </div>
   <div class="detail-body" id="detailBody"></div>
+  <div style="padding:12px 16px; border-top:1px solid var(--border)">
+    <button id="floodBtn" onclick="runFloodSim()" style="
+      width:100%; padding:10px; background:rgba(0,212,255,0.15);
+      border:1px solid var(--accent); color:var(--accent);
+      font-family:'Noto Sans KR',sans-serif; font-size:12px;
+      cursor:pointer; border-radius:3px; transition:all 0.2s">
+      💧 수몰 시뮬레이션 실행
+    </button>
+    <div id="floodStatus" style="font-size:10px; color:var(--text-dim);
+      font-family:'JetBrains Mono',monospace; margin-top:8px; text-align:center"></div>
+    <button id="floodClearBtn" onclick="clearFlood()" style="
+      display:none; width:100%; padding:6px; margin-top:6px;
+      background:transparent; border:1px solid var(--danger);
+      color:var(--danger); font-size:11px; cursor:pointer; border-radius:3px">
+      ✕ 수몰 구역 지우기
+    </button>
+  </div>
 </div>
 
 <!-- Phase2 배지 -->
-<div class="phase-badge">⚡ GEE 연동 준비중</div>
+<div class="phase-badge">✅ GEE 연동 완료</div>
 
 <!-- 하단 상태바 -->
 <div id="statusBar">
@@ -729,6 +825,83 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(remaining => {
     }, 600);
   }
 });
+
+// ── 수몰 시뮬레이션 ──
+const BACKEND_URL = 'https://nam-ngiao-backend.onrender.com';
+let currentDamId = null;
+let floodEntities = [];
+
+function runFloodSim() {
+  if (!currentDamId) return;
+  const btn = document.getElementById('floodBtn');
+  const status = document.getElementById('floodStatus');
+
+  btn.textContent = '⏳ GEE 분석중... (30초~1분)';
+  btn.disabled = true;
+  status.textContent = 'SRTM DEM 수몰 마스킹 계산중...';
+
+  fetch(`${BACKEND_URL}/flood-simulation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dam_id: currentDamId })
+  })
+  .then(r => r.json())
+  .then(data => {
+    clearFlood();
+    renderFlood(data);
+    btn.textContent = '💧 수몰 시뮬레이션 실행';
+    btn.disabled = false;
+    status.textContent = `수몰면적: ${data.flood_area_km2} km² | EL.${data.water_level}m`;
+    document.getElementById('floodClearBtn').style.display = 'block';
+  })
+  .catch(err => {
+    btn.textContent = '💧 수몰 시뮬레이션 실행';
+    btn.disabled = false;
+    status.textContent = '오류: ' + err.message;
+  });
+}
+
+function renderFlood(data) {
+  if (!data.geojson || !data.geojson.features) return;
+
+  data.geojson.features.forEach(feature => {
+    if (feature.geometry.type !== 'Polygon') return;
+    const coords = feature.geometry.coordinates[0];
+    const positions = coords.map(c =>
+      Cesium.Cartesian3.fromDegrees(c[0], c[1], data.water_level)
+    );
+    const entity = viewer.entities.add({
+      name: '수몰구역',
+      polygon: {
+        hierarchy: new Cesium.PolygonHierarchy(positions),
+        material: Cesium.Color.fromCssColorString('#0088ff').withAlpha(0.55),
+        outline: false,
+        height: data.water_level,
+        extrudedHeight: data.water_level,
+        perPositionHeight: false,
+      }
+    });
+    floodEntities.push(entity);
+  });
+}
+
+function clearFlood() {
+  floodEntities.forEach(e => viewer.entities.remove(e));
+  floodEntities = [];
+  document.getElementById('floodClearBtn').style.display = 'none';
+  document.getElementById('floodStatus').textContent = '';
+}
+
+// showDetail에서 currentDamId 설정
+const _origShowDetail = showDetail;
+showDetail = function(dam) {
+  currentDamId = dam.id;
+  clearFlood();
+  document.getElementById('floodBtn').textContent = '💧 수몰 시뮬레이션 실행';
+  document.getElementById('floodBtn').disabled = false;
+  _origShowDetail(dam);
+};
+
 </script>
 </body>
 </html>
