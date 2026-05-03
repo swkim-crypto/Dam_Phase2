@@ -444,9 +444,9 @@
 </div>
 
 <script>
-// ── S1~S9 댐 후보지 데이터 (dnr_v2.kml 기반) ──
+// ── S1~S9 댐 후보지 데이터 (dnr_v2.kml 기반, 중심좌표=wall평균) ──
 const DAMS = [
-  { id:'S1', name:'S1', priority:'검토필요', lat:18.4437, lon:103.58278,
+  { id:'S1', name:'S1', priority:'검토필요', lat:18.443750, lon:103.582780,
     elBase:138, elTop:198, vol:4834, note:'하천흐름 90° · 댐축 180°',
     wall:[[103.58278,18.446452702702402,198],[103.58278,18.441047297296997,198],[103.58278,18.44212837837808,138],[103.58278,18.44537162162132,138],[103.58278,18.446452702702402,198]]
   },
@@ -608,9 +608,15 @@ DAMS.forEach(dam => {
 
 // ── 댐으로 카메라 이동 ──
 function flyToDam(dam) {
+  // 댐 만수위 + 카메라 오프셋으로 벽체가 정면에 보이도록
+  const camAlt = dam.elTop + 8000;
   viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(dam.lon, dam.lat, 15000),
-    orientation: { pitch: Cesium.Math.toRadians(-35), heading: 0, roll: 0 },
+    destination: Cesium.Cartesian3.fromDegrees(dam.lon, dam.lat - 0.04, camAlt),
+    orientation: {
+      pitch: Cesium.Math.toRadians(-25),
+      heading: Cesium.Math.toRadians(0),
+      roll: 0
+    },
     duration: 2.5,
     easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
   });
