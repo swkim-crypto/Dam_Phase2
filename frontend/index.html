@@ -608,12 +608,14 @@ DAMS.forEach(dam => {
 
 // ── 댐으로 카메라 이동 ──
 function flyToDam(dam) {
-  // 댐 만수위 + 카메라 오프셋으로 벽체가 정면에 보이도록
-  const camAlt = dam.elTop + 8000;
+  // wall 좌표 중심으로 정확히 이동, 만수위 기준 위로 5000m
+  const centerLon = dam.wall.slice(0,4).reduce((s,c)=>s+c[0],0)/4;
+  const centerLat = dam.wall.slice(0,4).reduce((s,c)=>s+c[1],0)/4;
+  const camAlt = dam.elTop + 5000;
   viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(dam.lon, dam.lat - 0.04, camAlt),
+    destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat, camAlt),
     orientation: {
-      pitch: Cesium.Math.toRadians(-25),
+      pitch: Cesium.Math.toRadians(-45),
       heading: Cesium.Math.toRadians(0),
       roll: 0
     },
