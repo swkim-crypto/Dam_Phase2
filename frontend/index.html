@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nam Ngiao Basin — Dam Analysis System v2</title>
+  <title>Nam Ngiep Basin — Dam Analysis System v2</title>
 
   <!-- Cesium.js -->
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js">
 // ── 수몰 시뮬레이션 ──
-const BACKEND_URL = 'https://nam-ngiao-backend.onrender.com';
+const BACKEND_URL = 'https://nam-ngiep-backend.onrender.com';
 let currentDamId = null;
 let floodEntities = [];
 
@@ -465,7 +465,7 @@ showDetail = function(dam) {
 
 <!-- 로딩 화면 -->
 <div id="loading">
-  <div class="load-title">NAM NGIAO</div>
+  <div class="load-title">NAM NGIEP</div>
   <div class="load-sub">DAM ANALYSIS SYSTEM · PHASE 2</div>
   <div class="load-bar"><div class="load-bar-fill"></div></div>
   <div class="load-sub" style="font-size:9px; margin-top:4px">INITIALIZING CESIUM 3D TERRAIN...</div>
@@ -476,7 +476,7 @@ showDetail = function(dam) {
 
 <!-- 상단 바 -->
 <div id="topbar">
-  <div class="logo">NAM <span>NGIAO</span> BASIN</div>
+  <div class="logo">NAM <span>NGIEP</span> BASIN</div>
   <div class="version">v2.0 · PHASE2</div>
   <div class="topbar-nav">
     <button class="topbar-btn active" onclick="setView('basin')">유역 전체</button>
@@ -491,7 +491,23 @@ showDetail = function(dam) {
 
 <!-- 왼쪽 패널 -->
 <div id="leftPanel">
-  <div class="panel-header">DAM CANDIDATES · 남능지아오 유역 (Nam Ngiao)</div>
+  <!-- 차수 탭 -->
+  <div style="padding:10px 12px 0; display:flex; gap:4px; border-bottom:1px solid var(--border); flex-shrink:0;">
+    <button id="phaseTab1" onclick="switchPhase(1)" style="flex:1;padding:6px 0;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;cursor:pointer;border:1px solid #BA7517;border-bottom:none;border-radius:4px 4px 0 0;background:transparent;color:#BA7517;transition:all 0.15s;">1차</button>
+    <button id="phaseTab2" onclick="switchPhase(2)" style="flex:1;padding:6px 0;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;cursor:pointer;border:1px solid #00ff88;border-bottom:none;border-radius:4px 4px 0 0;background:rgba(0,255,136,0.1);color:#00ff88;box-shadow:inset 0 2px 0 #00ff88;transition:all 0.15s;">2차</button>
+    <button id="phaseTab3" onclick="switchPhase(3)" style="flex:1;padding:6px 0;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;cursor:pointer;border:1px solid var(--border);border-bottom:none;border-radius:4px 4px 0 0;background:transparent;color:var(--text-dim);transition:all 0.15s;">3차</button>
+  </div>
+  <!-- 차수 메타 -->
+  <div id="phaseMeta" style="padding:8px 12px 8px;border-bottom:1px solid var(--border);flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:9px;line-height:1.7;color:var(--text-dim);background:rgba(0,255,136,0.04);">
+    <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+      <span id="phaseDate">2026-05</span>
+      <span id="phaseDem" style="border:1px solid #00ff88;color:#00ff88;padding:0 5px;border-radius:2px;">HydroRIVERS / SRTM GL1</span>
+    </div>
+    <div id="phaseMethod" style="margin-bottom:2px;">HydroRIVERS + 유향(NEXT_DOWN) 적용</div>
+    <div id="phaseCrit" style="color:#00ff88;font-weight:700;">기준: 저수량 ≥ 5Mm³ (쐐기형 근사)</div>
+    <div id="phaseNote" style="margin-top:3px;opacity:0.7;font-size:8px;">575개 세그먼트 → 필터 → 5개 선정. 소유역 미완성으로 저수량은 근사치</div>
+  </div>
+  <div class="panel-header" style="border-bottom:none;padding-bottom:4px;">DAM CANDIDATES · 남니옙 유역</div>
   <div id="damList"></div>
   <div class="legend">
     <div class="legend-item"><div class="legend-dot" style="background:var(--op-green)"></div>최우선</div>
@@ -577,6 +593,122 @@ const DAMS = [
 ];
 
 const PRIORITY_LABEL = { '최우선':'🟢 최우선', '2순위':'🟡 2순위', '검토필요':'⚪ 검토필요' };
+
+// ── Phase 별 데이터 ──
+const PHASE_META = {
+  1: { date:'2026-04', dem:'SRTM GL1 30m',       method:'SRTM GL1 + flood-fill',              crit:'상류 저수량 ≥ 5Mm³',          note:'초기 분석. 강 중심선 재생성, 등고선 마스킹으로 범람역 제한', color:'#BA7517' },
+  2: { date:'2026-05', dem:'HydroRIVERS / SRTM', method:'HydroRIVERS + 유향(NEXT_DOWN) 적용', crit:'저수량 ≥ 5Mm³ (쐐기형 근사)', note:'575개 세그먼트 → 필터 → 5개 선정. 소유역 미완성으로 저수량은 근사치', color:'#00ff88' },
+  3: { date:'진행중',  dem:'미정',               method:'소유역 경계 + DEM 정밀',              crit:'미정',                         note:'소유역 완성 후 집수면적 기반 정밀 저수량 재산정 예정', color:'#00d4ff' },
+};
+
+const PHASE2_DAMS = [
+  { id:'C1', name:'C1', priority:'최우선', lat:18.4083, lon:103.5937,
+    elBase:null, elTop:null, vol:14.7, hMin5:20,
+    upland:4515, dis:135.3, note:'ORD_FLOW=4 대하천. H=20m에서 5Mm³ 달성. 집수면적 4,515km², 유량 135m³/s',
+    wall:[[103.5937,18.4083,200],[103.5947,18.4083,200],[103.5942,18.4083,100],[103.5932,18.4083,100],[103.5937,18.4083,200]]
+  },
+  { id:'C2', name:'C2', priority:'최우선', lat:18.6396, lon:103.6021,
+    elBase:null, elTop:null, vol:13.7, hMin5:30,
+    upland:4150, dis:117.5, note:'ORD_FLOW=4 대하천. H=30m에서 5Mm³ 달성. 집수면적 4,150km², 유량 117m³/s',
+    wall:[[103.6021,18.6396,200],[103.6031,18.6396,200],[103.6026,18.6396,100],[103.6016,18.6396,100],[103.6021,18.6396,200]]
+  },
+  { id:'C3', name:'C3', priority:'최우선', lat:18.7604, lon:103.4312,
+    elBase:null, elTop:null, vol:11.7, hMin5:30,
+    upland:3386, dis:84.9, note:'ORD_FLOW=5 중간하천. H=30m에서 5Mm³ 달성. 집수면적 3,386km², 유량 84m³/s',
+    wall:[[103.4312,18.7604,200],[103.4322,18.7604,200],[103.4317,18.7604,100],[103.4307,18.7604,100],[103.4312,18.7604,200]]
+  },
+  { id:'C4', name:'C4', priority:'2순위', lat:18.9812, lon:103.4896,
+    elBase:null, elTop:null, vol:9.5, hMin5:30,
+    upland:2444, dis:49.8, note:'ORD_FLOW=5 중간하천. H=30m에서 5Mm³ 달성. 집수면적 2,444km², 유량 49m³/s',
+    wall:[[103.4896,18.9812,200],[103.4906,18.9812,200],[103.4901,18.9812,100],[103.4891,18.9812,100],[103.4896,18.9812,200]]
+  },
+  { id:'C5', name:'C5', priority:'2순위', lat:19.1687, lon:103.3562,
+    elBase:null, elTop:null, vol:5.5, hMin5:50,
+    upland:908, dis:17.8, note:'ORD_FLOW=5 상류 소하천. H=50m에서 5Mm³ 달성. 집수면적 908km², 유량 17m³/s',
+    wall:[[103.3562,19.1687,200],[103.3572,19.1687,200],[103.3567,19.1687,100],[103.3557,19.1687,100],[103.3562,19.1687,200]]
+  },
+];
+
+const PHASE3_DAMS = []; // 소유역 완성 후 추가
+
+let currentPhase = 2;
+let currentDams = PHASE2_DAMS;
+
+function switchPhase(p) {
+  currentPhase = p;
+  currentDams = p === 1 ? DAMS : p === 2 ? PHASE2_DAMS : PHASE3_DAMS;
+
+  // 탭 스타일 업데이트
+  [1,2,3].forEach(n => {
+    const tab = document.getElementById('phaseTab' + n);
+    const meta = PHASE_META[n];
+    if (n === p) {
+      tab.style.background = `rgba(${n===1?'186,117,23':n===2?'0,255,136':'0,212,255'},0.1)`;
+      tab.style.borderColor = meta.color;
+      tab.style.color = meta.color;
+      tab.style.boxShadow = `inset 0 2px 0 ${meta.color}`;
+    } else {
+      tab.style.background = 'transparent';
+      tab.style.borderColor = 'var(--border)';
+      tab.style.color = 'var(--text-dim)';
+      tab.style.boxShadow = 'none';
+    }
+  });
+
+  // 메타 정보 업데이트
+  const meta = PHASE_META[p];
+  document.getElementById('phaseDate').textContent = meta.date;
+  document.getElementById('phaseDem').textContent = meta.dem;
+  document.getElementById('phaseDem').style.borderColor = meta.color;
+  document.getElementById('phaseDem').style.color = meta.color;
+  document.getElementById('phaseMethod').textContent = meta.method;
+  document.getElementById('phaseCrit').textContent = '기준: ' + meta.crit;
+  document.getElementById('phaseCrit').style.color = meta.color;
+  document.getElementById('phaseNote').textContent = meta.note;
+  document.getElementById('phaseMeta').style.background = `rgba(${p===1?'186,117,23':p===2?'0,255,136':'0,212,255'},0.04)`;
+
+  // 목록 다시 렌더링
+  renderDamList(currentDams);
+
+  // 패널 닫기
+  closeDetail();
+
+  // 상태바 업데이트
+  const best = currentDams.filter(d => d.priority === '최우선').length;
+  const sec  = currentDams.filter(d => d.priority === '2순위').length;
+  document.querySelector('#statusBar .stat:nth-child(1) span').textContent = currentDams.length;
+  document.querySelector('#statusBar .stat:nth-child(2) span').textContent = best;
+  document.querySelector('#statusBar .stat:nth-child(3) span').textContent = sec;
+}
+
+function renderDamList(dams) {
+  const damList = document.getElementById('damList');
+  damList.innerHTML = '';
+  dams.forEach(dam => {
+    const item = document.createElement('div');
+    item.className = 'dam-item';
+    item.dataset.id = dam.id;
+    const color = STATUS_COLOR[dam.priority];
+    const volStr = dam.vol ? dam.vol.toLocaleString() : '—';
+    const elStr  = dam.elBase != null ? `EL.${dam.elBase}~${dam.elTop}m · ` : '';
+    item.innerHTML = `
+      <div class="dam-status" style="background:${color}; box-shadow:0 0 6px ${color}"></div>
+      <div class="dam-info">
+        <div class="dam-name">${dam.name}</div>
+        <div class="dam-sub">${elStr}${volStr} Mm³</div>
+      </div>
+      <div class="dam-mw" style="color:${color}; font-size:10px">${dam.priority}</div>
+    `;
+    item.addEventListener('click', () => {
+      flyToDam(dam);
+      showDetail(dam);
+      document.querySelectorAll('.dam-item').forEach(el => el.classList.remove('active'));
+      item.classList.add('active');
+    });
+    damList.appendChild(item);
+  });
+}
+
 const STATUS_COLOR   = { '최우선':'#00ff88',   '2순위':'#ffcc00',  '검토필요':'#7a9ab0' };
 
 // ── Cesium 초기화 ──
@@ -674,33 +806,8 @@ DAMS.forEach(dam => {
   entities[dam.id] = entity;
 });
 
-// ── 왼쪽 패널 댐 목록 렌더링 ──
-const damList = document.getElementById('damList');
-
-DAMS.forEach(dam => {
-  const item = document.createElement('div');
-  item.className = 'dam-item';
-  item.dataset.id = dam.id;
-  const color = STATUS_COLOR[dam.priority];
-
-  item.innerHTML = `
-    <div class="dam-status" style="background:${color}; box-shadow:0 0 6px ${color}"></div>
-    <div class="dam-info">
-      <div class="dam-name">${dam.name}</div>
-      <div class="dam-sub">EL.${dam.elBase}~${dam.elTop}m · ${dam.vol.toLocaleString()} Mm³</div>
-    </div>
-    <div class="dam-mw" style="color:${color}; font-size:10px">${dam.priority}</div>
-  `;
-
-  item.addEventListener('click', () => {
-    flyToDam(dam);
-    showDetail(dam);
-    document.querySelectorAll('.dam-item').forEach(el => el.classList.remove('active'));
-    item.classList.add('active');
-  });
-
-  damList.appendChild(item);
-});
+// ── 왼쪽 패널 댐 목록 초기 렌더링 (2차) ──
+renderDamList(PHASE2_DAMS);
 
 // ── 댐으로 카메라 이동 ──
 function flyToDam(dam) {
@@ -827,7 +934,7 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(remaining => {
 });
 
 // ── 수몰 시뮬레이션 ──
-const BACKEND_URL = 'https://nam-ngiao-backend.onrender.com';
+const BACKEND_URL = 'https://nam-ngiep-backend.onrender.com';
 let currentDamId = null;
 let floodEntities = [];
 
