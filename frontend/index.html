@@ -473,6 +473,109 @@ showDetail = function(dam) {
       from { width: 0; }
       to   { width: 100%; }
     }
+
+    /* ══════════════════════════════════════════════
+       모바일 반응형 (max-width: 768px)
+    ══════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+
+      /* 상단바 간소화 */
+      #topbar {
+        height: 44px;
+        padding: 0 12px;
+        gap: 8px;
+      }
+      #topbar .logo { font-size: 16px; letter-spacing: 2px; }
+      #topbar .version { display: none; }
+      .topbar-nav { display: none; } /* 뷰 전환 버튼 숨김 */
+
+      /* 좌측 패널 → 하단 서랍으로 전환 */
+      #leftPanel {
+        top: auto;
+        bottom: 44px; /* 하단탭 + 상태바 높이 */
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: 55vh;
+        border-right: none;
+        border-top: 2px solid var(--accent);
+        transform: translateY(100%); /* 기본 숨김 */
+        transition: transform 0.3s ease;
+        border-radius: 12px 12px 0 0;
+      }
+      #leftPanel.mobile-open { transform: translateY(0); }
+      #leftPanel.collapsed { transform: translateY(100%); }
+
+      /* 패널 토글 버튼 숨김 (모바일은 탭으로 제어) */
+      #togglePanel { display: none; }
+
+      /* 우측 상세 패널 → 하단 슬라이드업 */
+      #rightPanel {
+        top: auto;
+        bottom: 44px;
+        right: 0;
+        left: 0;
+        width: 100%;
+        max-height: 60vh;
+        border-left: none;
+        border-top: 2px solid var(--accent);
+        transform: translateY(100%);
+        border-radius: 12px 12px 0 0;
+        transition: transform 0.3s ease;
+      }
+      #rightPanel.open { transform: translateY(0); }
+
+      /* 하단 탭 바 */
+      #mobileTabBar {
+        display: flex !important;
+      }
+
+      /* 상태바 */
+      #statusBar {
+        bottom: 44px;
+        height: 0;
+        display: none;
+      }
+
+      /* phase-badge 위치 조정 */
+      .phase-badge {
+        top: 50px;
+        right: 8px;
+        font-size: 8px;
+      }
+    }
+
+    /* 하단 탭 바 (모바일 전용, 기본 숨김) */
+    #mobileTabBar {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 44px;
+      background: rgba(8,14,20,0.97);
+      border-top: 1px solid var(--border);
+      z-index: 200;
+      backdrop-filter: blur(12px);
+    }
+
+    .mob-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      cursor: pointer;
+      color: var(--text-dim);
+      font-size: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      border: none;
+      background: transparent;
+      transition: color 0.15s;
+      padding: 4px 0;
+    }
+    .mob-tab .mob-icon { font-size: 16px; line-height: 1; }
+    .mob-tab.active { color: var(--accent); }
+    .mob-tab.active .mob-icon { filter: drop-shadow(0 0 4px var(--accent)); }
   </style>
 </head>
 <body>
@@ -1140,5 +1243,64 @@ showDetail = function(dam) {
 };
 
 </script>
+
+<!-- 모바일 하단 탭 바 -->
+<div id="mobileTabBar">
+  <button class="mob-tab" id="mobTabMap" onclick="mobSelectTab('map')">
+    <span class="mob-icon">🌏</span>
+    <span>지도</span>
+  </button>
+  <button class="mob-tab active" id="mobTabList" onclick="mobSelectTab('list')">
+    <span class="mob-icon">📋</span>
+    <span>목록</span>
+  </button>
+  <button class="mob-tab" id="mobTabDetail" onclick="mobSelectTab('detail')">
+    <span class="mob-icon">📊</span>
+    <span>상세</span>
+  </button>
+</div>
+
+<script>
+// ── 모바일 탭 제어 ──
+let _mobActive = 'list';
+
+function mobSelectTab(tab) {
+  _mobActive = tab;
+  const leftPanel   = document.getElementById('leftPanel');
+  const rightPanel  = document.getElementById('rightPanel');
+
+  // 탭 스타일
+  ['map','list','detail'].forEach(t => {
+    const el = document.getElementById('mobTab' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (el) el.classList.toggle('active', t === tab);
+  });
+
+  if (tab === 'map') {
+    leftPanel.classList.remove('mobile-open');
+    rightPanel.classList.remove('open');
+  } else if (tab === 'list') {
+    leftPanel.classList.add('mobile-open');
+    rightPanel.classList.remove('open');
+  } else if (tab === 'detail') {
+    leftPanel.classList.remove('mobile-open');
+    rightPanel.classList.add('open');
+  }
+}
+
+// 댐 선택 시 모바일에서 자동으로 상세 탭으로 이동
+const _origFlyToDam = flyToDam;
+flyToDam = function(dam) {
+  _origFlyToDam(dam);
+  if (window.innerWidth <= 768) {
+    setTimeout(() => mobSelectTab('detail'), 300);
+  }
+};
+
+// 초기: 모바일이면 목록 탭 활성
+if (window.innerWidth <= 768) {
+  mobSelectTab('list');
+}
+</script>
+
 </body>
 </html>
