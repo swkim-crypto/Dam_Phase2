@@ -619,27 +619,27 @@ const PHASE2_DAMS = [
   { id:'C1', name:'C1', priority:'최우선', lat:18.4083, lon:103.5937,
     elBase:null, elTop:null, vol:14.7, hMin5:20,
     upland:4515, dis:135.3, note:'ORD_FLOW=4 대하천. H=20m에서 5Mm³ 달성. 집수면적 4,515km², 유량 135m³/s',
-    wall:[[103.5937,18.4083,200],[103.5947,18.4083,200],[103.5942,18.4083,100],[103.5932,18.4083,100],[103.5937,18.4083,200]]
+    wall:null
   },
   { id:'C2', name:'C2', priority:'최우선', lat:18.6396, lon:103.6021,
     elBase:null, elTop:null, vol:13.7, hMin5:30,
     upland:4150, dis:117.5, note:'ORD_FLOW=4 대하천. H=30m에서 5Mm³ 달성. 집수면적 4,150km², 유량 117m³/s',
-    wall:[[103.6021,18.6396,200],[103.6031,18.6396,200],[103.6026,18.6396,100],[103.6016,18.6396,100],[103.6021,18.6396,200]]
+    wall:null
   },
   { id:'C3', name:'C3', priority:'최우선', lat:18.7604, lon:103.4312,
     elBase:null, elTop:null, vol:11.7, hMin5:30,
     upland:3386, dis:84.9, note:'ORD_FLOW=5 중간하천. H=30m에서 5Mm³ 달성. 집수면적 3,386km², 유량 84m³/s',
-    wall:[[103.4312,18.7604,200],[103.4322,18.7604,200],[103.4317,18.7604,100],[103.4307,18.7604,100],[103.4312,18.7604,200]]
+    wall:null
   },
   { id:'C4', name:'C4', priority:'2순위', lat:18.9812, lon:103.4896,
     elBase:null, elTop:null, vol:9.5, hMin5:30,
     upland:2444, dis:49.8, note:'ORD_FLOW=5 중간하천. H=30m에서 5Mm³ 달성. 집수면적 2,444km², 유량 49m³/s',
-    wall:[[103.4896,18.9812,200],[103.4906,18.9812,200],[103.4901,18.9812,100],[103.4891,18.9812,100],[103.4896,18.9812,200]]
+    wall:null
   },
   { id:'C5', name:'C5', priority:'2순위', lat:19.1687, lon:103.3562,
     elBase:null, elTop:null, vol:5.5, hMin5:50,
     upland:908, dis:17.8, note:'ORD_FLOW=5 상류 소하천. H=50m에서 5Mm³ 달성. 집수면적 908km², 유량 17m³/s',
-    wall:[[103.3562,19.1687,200],[103.3572,19.1687,200],[103.3567,19.1687,100],[103.3557,19.1687,100],[103.3562,19.1687,200]]
+    wall:null
   },
 ];
 
@@ -684,8 +684,22 @@ function switchPhase(p) {
   // 목록 다시 렌더링
   renderDamList(currentDams);
 
-  // 패널 닫기
+  // 패널 닫기 및 수몰 버튼 초기화
   closeDetail();
+  const btn = document.getElementById('floodBtn');
+  if (p === 1) {
+    btn.textContent = '💧 수몰 시뮬레이션 실행';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+    btn.onclick = runFloodSim;
+  } else {
+    btn.textContent = '⏳ 소유역 분석 완료 후 시뮬 가능';
+    btn.disabled = true;
+    btn.style.opacity = '0.4';
+    btn.style.cursor = 'not-allowed';
+    btn.onclick = null;
+  }
 
   // 상태바 업데이트
   const best = currentDams.filter(d => d.priority === '최우선').length;
@@ -755,9 +769,10 @@ let terrainOn = true;
 // ── 댐 마커 추가 ──
 const entities = {};
 
-// ── 댐 벽체 + 마루선 렌더링 (DAMS.wall 사용) ──
+// ── 댐 벽체 + 마루선 렌더링 (wall 있는 경우만) ──
 DAMS.forEach(dam => {
   const color = STATUS_COLOR[dam.priority];
+  if (!dam.wall) return; // wall 없으면 skip (마커만)
   const positions = Cesium.Cartesian3.fromDegreesArrayHeights(dam.wall.flat());
 
   // 역사다리꼴 벽체
@@ -825,34 +840,36 @@ renderDamList(PHASE2_DAMS);
 
 // ── 댐으로 카메라 이동 (법선 방향 뒤에서 바라보기) ──
 function flyToDam(dam) {
-  const w = dam.wall;
-  // 댐 마루선: wall[0]~wall[1] (상단 두 점)
-  const lon0 = w[0][0], lat0 = w[0][1];
-  const lon1 = w[1][0], lat1 = w[1][1];
+  let centerLon, centerLat, camLon, camLat, headingDeg, camAlt;
 
-  // 댐 중심
-  const centerLon = (lon0 + lon1) / 2;
-  const centerLat = (lat0 + lat1) / 2;
-  const elTop = dam.elTop ?? (dam.elBase ?? 500) + 100;
+  if (dam.wall) {
+    // 1차(S1~S9): wall 마루선 기반 법선 계산
+    const w = dam.wall;
+    const lon0 = w[0][0], lat0 = w[0][1];
+    const lon1 = w[1][0], lat1 = w[1][1];
+    centerLon = (lon0 + lon1) / 2;
+    centerLat = (lat0 + lat1) / 2;
 
-  // 댐 축 벡터 (마루선 방향)
-  const dLon = lon1 - lon0;
-  const dLat = lat1 - lat0;
+    const dLon = lon1 - lon0;
+    const dLat = lat1 - lat0;
+    const len  = Math.sqrt(dLon*dLon + dLat*dLat) || 1;
+    const nLon = -dLat / len;
+    const nLat =  dLon / len;
 
-  // 법선 벡터 (댐 축에 수직, 하류 방향) — 90도 회전
-  const len = Math.sqrt(dLon*dLon + dLat*dLat) || 1;
-  const nLon = -dLat / len;  // 법선 lon 성분
-  const nLat =  dLon / len;  // 법선 lat 성분
-
-  // 카메라: 법선 방향으로 0.05도(약 5km) 뒤, 고도 +2500m
-  const dist = 0.05;
-  const camLon = centerLon + nLon * dist;
-  const camLat = centerLat + nLat * dist;
-  const camAlt = elTop + 2500;
-
-  // heading: 법선 반대방향(댐을 바라보는 방향)
-  const headingRad = Math.atan2(-nLon, -nLat); // 북=0, 동=90
-  const headingDeg = Cesium.Math.toDegrees(headingRad);
+    const dist = 0.05;
+    camLon = centerLon + nLon * dist;
+    camLat = centerLat + nLat * dist;
+    camAlt = (dam.elTop ?? 500) + 2500;
+    headingDeg = Cesium.Math.toDegrees(Math.atan2(-nLon, -nLat));
+  } else {
+    // 2차(C1~C5): lat/lon 기준, 남쪽에서 북쪽 바라보기
+    centerLon = dam.lon;
+    centerLat = dam.lat;
+    camLon = centerLon;
+    camLat = centerLat - 0.04;
+    camAlt = 4000;
+    headingDeg = 0; // 북향
+  }
 
   viewer.camera.flyTo({
     destination: Cesium.Cartesian3.fromDegrees(camLon, camLat, camAlt),
