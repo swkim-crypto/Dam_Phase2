@@ -73,13 +73,27 @@ function clearFlood() {
   document.getElementById('floodStatus').textContent = '';
 }
 
-// showDetail에서 currentDamId 설정
+// showDetail에서 currentDamId 설정 + 차수별 수몰 버튼 처리
 const _origShowDetail = showDetail;
 showDetail = function(dam) {
   currentDamId = dam.id;
   clearFlood();
-  document.getElementById('floodBtn').textContent = '💧 수몰 시뮬레이션 실행';
-  document.getElementById('floodBtn').disabled = false;
+  const btn = document.getElementById('floodBtn');
+  if (currentPhase === 1) {
+    // 1차: 수몰 시뮬 정상 활성
+    btn.textContent = '💧 수몰 시뮬레이션 실행';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+    btn.onclick = runFloodSim;
+  } else {
+    // 2차~: 소유역 미완성 안내
+    btn.textContent = '⏳ 소유역 분석 완료 후 시뮬 가능';
+    btn.disabled = true;
+    btn.style.opacity = '0.4';
+    btn.style.cursor = 'not-allowed';
+    btn.onclick = null;
+  }
   _origShowDetail(dam);
 };
 
@@ -809,17 +823,43 @@ DAMS.forEach(dam => {
 // ── 왼쪽 패널 댐 목록 초기 렌더링 (2차) ──
 renderDamList(PHASE2_DAMS);
 
-// ── 댐으로 카메라 이동 ──
+// ── 댐으로 카메라 이동 (법선 방향 뒤에서 바라보기) ──
 function flyToDam(dam) {
-  // wall 중심에서 남쪽 0.06도 떨어진 위치에서 북쪽 댐을 바라봄
-  const centerLon = dam.wall.slice(0,4).reduce((s,c)=>s+c[0],0)/4;
-  const centerLat = dam.wall.slice(0,4).reduce((s,c)=>s+c[1],0)/4;
+  const w = dam.wall;
+  // 댐 마루선: wall[0]~wall[1] (상단 두 점)
+  const lon0 = w[0][0], lat0 = w[0][1];
+  const lon1 = w[1][0], lat1 = w[1][1];
+
+  // 댐 중심
+  const centerLon = (lon0 + lon1) / 2;
+  const centerLat = (lat0 + lat1) / 2;
+  const elTop = dam.elTop ?? (dam.elBase ?? 500) + 100;
+
+  // 댐 축 벡터 (마루선 방향)
+  const dLon = lon1 - lon0;
+  const dLat = lat1 - lat0;
+
+  // 법선 벡터 (댐 축에 수직, 하류 방향) — 90도 회전
+  const len = Math.sqrt(dLon*dLon + dLat*dLat) || 1;
+  const nLon = -dLat / len;  // 법선 lon 성분
+  const nLat =  dLon / len;  // 법선 lat 성분
+
+  // 카메라: 법선 방향으로 0.05도(약 5km) 뒤, 고도 +2500m
+  const dist = 0.05;
+  const camLon = centerLon + nLon * dist;
+  const camLat = centerLat + nLat * dist;
+  const camAlt = elTop + 2500;
+
+  // heading: 법선 반대방향(댐을 바라보는 방향)
+  const headingRad = Math.atan2(-nLon, -nLat); // 북=0, 동=90
+  const headingDeg = Cesium.Math.toDegrees(headingRad);
+
   viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat - 0.06, dam.elTop + 3000),
+    destination: Cesium.Cartesian3.fromDegrees(camLon, camLat, camAlt),
     orientation: {
-      pitch: Cesium.Math.toRadians(-20),
-      heading: Cesium.Math.toRadians(0),
-      roll: 0
+      heading: Cesium.Math.toRadians(headingDeg),
+      pitch:   Cesium.Math.toRadians(-22),
+      roll:    0
     },
     duration: 2.5,
     easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
@@ -833,11 +873,14 @@ function showDetail(dam) {
   document.getElementById('detailStatus').innerHTML =
     `<span style="color:${color}">${PRIORITY_LABEL[dam.priority]}</span>`;
 
+  const hasEl = dam.elBase != null && dam.elTop != null;
   const rows = [
-    ['하상고도', `EL. ${dam.elBase} m`],
-    ['만수위',   `EL. ${dam.elTop} m`, false],
-    ['댐 높이',  `${dam.elTop - dam.elBase} m`, false],
-    ['저수량',   `${dam.vol.toLocaleString()} Mm³`, true],
+    ['하상고도', hasEl ? `EL. ${dam.elBase} m` : '—'],
+    ['만수위',   hasEl ? `EL. ${dam.elTop} m` : '—', false],
+    ['댐 높이',  hasEl ? `${dam.elTop - dam.elBase} m` : `H≥${dam.hMin5 ?? '—'}m (최소)`, false],
+    ['저수량',   `${dam.vol != null ? dam.vol.toLocaleString() : '—'} Mm³`, true],
+    ...(dam.upland ? [['집수면적', `${dam.upland.toLocaleString()} km²`]] : []),
+    ...(dam.dis    ? [['평균 유량', `${dam.dis} m³/s`]] : []),
     ['좌표 (위)', `${dam.lat.toFixed(5)}°N`],
     ['좌표 (경)', `${dam.lon.toFixed(5)}°E`],
     ['비고',     dam.note || '—'],
@@ -999,13 +1042,27 @@ function clearFlood() {
   document.getElementById('floodStatus').textContent = '';
 }
 
-// showDetail에서 currentDamId 설정
+// showDetail에서 currentDamId 설정 + 차수별 수몰 버튼 처리
 const _origShowDetail = showDetail;
 showDetail = function(dam) {
   currentDamId = dam.id;
   clearFlood();
-  document.getElementById('floodBtn').textContent = '💧 수몰 시뮬레이션 실행';
-  document.getElementById('floodBtn').disabled = false;
+  const btn = document.getElementById('floodBtn');
+  if (currentPhase === 1) {
+    // 1차: 수몰 시뮬 정상 활성
+    btn.textContent = '💧 수몰 시뮬레이션 실행';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+    btn.onclick = runFloodSim;
+  } else {
+    // 2차~: 소유역 미완성 안내
+    btn.textContent = '⏳ 소유역 분석 완료 후 시뮬 가능';
+    btn.disabled = true;
+    btn.style.opacity = '0.4';
+    btn.style.cursor = 'not-allowed';
+    btn.onclick = null;
+  }
   _origShowDetail(dam);
 };
 
