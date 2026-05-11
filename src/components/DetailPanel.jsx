@@ -4,7 +4,8 @@ import { damLengths } from '../data/damLengths.js'
 import ProfileChart from './ProfileChart.jsx'
 
 // Phase 2(C1~C5)인지 판별 — bed/baseArea가 null이면 근사치 모드
-const isApproxMode = (c) => c.bed == null || c.baseArea == null
+// C계열: bed=null → 근사치 모드 / T계열: bed 있음 + profiles 있음 → 정상
+const isApproxMode = (c) => c.bed == null
 
 function StatCard({ label, value, unit, sub }) {
   const display = value == null ? '—' : value
@@ -34,7 +35,7 @@ export default function DetailPanel({ candidate, heightM, onHeightChange }) {
   }, [candidate, heightM])
 
   const damLength = useMemo(() => {
-    if (!candidate || approx) return null
+    if (!candidate) return null
     const steps = [40,50,60,70,80,90,100,110,120]
     const nearest = steps.reduce((a,b) => Math.abs(b-heightM)<Math.abs(a-heightM)?b:a)
     return damLengths[candidate.id]?.[String(nearest)] ?? null
@@ -130,7 +131,11 @@ export default function DetailPanel({ candidate, heightM, onHeightChange }) {
               <div style={{ fontSize:12, color:'#5a7a90', fontFamily:'var(--font-mono)', marginBottom:6 }}>단면 프로파일</div>
               <div style={{ fontSize:11, color:'#8aafc8', lineHeight:1.8 }}>
                 소유역 분석 완료 후 제공 예정<br/>
-                <span style={{ color:'#BA7517' }}>집수면적 {candidate.upland_skm?.toLocaleString()} km² · 유량 {candidate.dis_av_cms} m³/s</span>
+                <span style={{ color:'#BA7517' }}>
+                  집수면적 {candidate.upland_skm?.toLocaleString()} km²
+                  {candidate.dis_av_cms ? ` · 유량 ${candidate.dis_av_cms} m³/s` : ''}
+                  {candidate.slope ? ` · 경사 ${candidate.slope}` : ''}
+                </span>
               </div>
             </div>
           )
