@@ -448,36 +448,44 @@ viewer.scene.globe.enableLighting = true;
 // ════════════════════════════════════════════════════
 function addMarker(dam, phase) {
   const color = STATUS_COLOR[dam.priority];
-  const alt   = dam.elTop ? dam.elTop + 500 : 1200;
   const show  = (phase === currentPhase);
 
-  const entity = viewer.entities.add({
-    name: dam.name,
-    position: Cesium.Cartesian3.fromDegrees(dam.lon, dam.lat, alt),
-    show,
-    point: {
-      pixelSize: 14,
-      color: Cesium.Color.fromCssColorString(color),
-      outlineColor: Cesium.Color.WHITE,
-      outlineWidth: 2,
-      disableDepthTestDistance: Number.POSITIVE_INFINITY,
-    },
-    label: {
-      text: dam.name,
-      font: 'bold 13px "Noto Sans KR"',
-      fillColor: Cesium.Color.WHITE,
-      outlineColor: Cesium.Color.BLACK,
-      outlineWidth: 3,
-      style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-      pixelOffset: new Cesium.Cartesian2(0, -14),
-      disableDepthTestDistance: Number.POSITIVE_INFINITY,
-      showBackground: true,
-      backgroundColor: Cesium.Color.fromCssColorString(color).withAlpha(0.8),
-      backgroundPadding: new Cesium.Cartesian2(8, 5),
-    },
+  // Cesium 지형 높이를 샘플링하여 정확한 높이 계산
+  const position = Cesium.Cartographic.fromDegrees(dam.lon, dam.lat);
+  const positions = [position];
+  
+  Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, positions).then(updatedPositions => {
+    const terrainHeight = updatedPositions[0].height;
+    const alt = terrainHeight + 50; // 지형 위 50m
+    
+    const entity = viewer.entities.add({
+      name: dam.name,
+      position: Cesium.Cartesian3.fromDegrees(dam.lon, dam.lat, alt),
+      show,
+      point: {
+        pixelSize: 14,
+        color: Cesium.Color.fromCssColorString(color),
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 2,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      },
+      label: {
+        text: dam.name,
+        font: 'bold 13px "Noto Sans KR"',
+        fillColor: Cesium.Color.WHITE,
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 3,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        pixelOffset: new Cesium.Cartesian2(0, -14),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        showBackground: true,
+        backgroundColor: Cesium.Color.fromCssColorString(color).withAlpha(0.8),
+        backgroundPadding: new Cesium.Cartesian2(8, 5),
+      },
+    });
+    phaseEntities[phase][dam.id] = entity;
   });
-  phaseEntities[phase][dam.id] = entity;
 }
 
 // ── 댐 벽체(역사다리꼴) 심볼 ──────────────────────
@@ -513,7 +521,7 @@ function addDamSymbol(dam, phase) {
     });
     phase1WallEntities.push(wallE, crownE);
   } else {
-    // C/T계열: SVG billboard 역사다리꼴
+    // C/T계열: SVG billboard 역사다리꼴 - 지형 샘플링 사용
     const svgW = 52, svgH = 18, botW = 26, pad = (svgW - botW) / 2;
     const hex  = color.replace('#','');
     const svg  = `<svg xmlns='http://www.w3.org/2000/svg' width='${svgW}' height='${svgH}'>
@@ -521,30 +529,58 @@ function addDamSymbol(dam, phase) {
         fill='%23${hex}' fill-opacity='0.75' stroke='%23${hex}' stroke-width='1.5'/>
       <line x1='0' y1='1' x2='${svgW}' y2='1' stroke='white' stroke-width='2'/>
     </svg>`;
-    const alt = dam.elBase ? dam.elBase + 20 : 800;  // 지형에 맞게 살짝만 올림
-    const entity = viewer.entities.add({
-      name: dam.name + ' 심볼',
-      position: Cesium.Cartesian3.fromDegrees(dam.lon, dam.lat, alt),
-      show,
-      billboard: {
-        image: 'data:image/svg+xml,' + svg,
-        width: svgW * 1.5, height: svgH * 1.5,
-        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        pixelOffset: new Cesium.Cartesian2(0, 0),
-      },
+    
+    // Cesium 지형 샘플링으로 정확한 높이 계산
+    const position = Cesium.Cartographic.fromDegrees(dam.lon, dam.lat);
+    Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, [position]).then(updatedPositions => {
+      const terrainHeight = updatedPositions[0].height;
+      const alt = terrainHeight + 20; // 지형 위 20m
+      
+      const entity = viewer.entities.add({
+        name: dam.name + ' 심볼',
+        position: Cesium.Cartesian3.fromDegrees(dam.lon, dam.lat, alt),
+        show,
+        billboard: {
+          image: 'data:image/svg+xml,' + svg,
+          width: svgW * 1.5, height: svgH * 1.5,
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          pixelOffset: new Cesium.Cartesian2(0, 0),
+        },
+      });
+      phaseEntities[phase][dam.id + '_sym'] = entity;
     });
-    phaseEntities[phase][dam.id + '_sym'] = entity;
   }
 }
 
 // ── 전체 마커 초기화 ──────────────────────────────
+console.log('🏗️ Dam elevation check (first 3 dams):');
 [1, 2, 3].forEach(p => {
-  window.DAMS_BY_PHASE[p].forEach(dam => {
+  window.DAMS_BY_PHASE[p].forEach((dam, idx) => {
+    if (idx < 3) {
+      console.log(`Phase ${p} - ${dam.name}: elBase=${dam.elBase}, elTop=${dam.elTop}, wall=${!!dam.wall}`);
+    }
     addMarker(dam, p);
     addDamSymbol(dam, p);
   });
 });
+
+// ── floods.js 디버깅 ──────────────────────────────
+console.log('🔍 Flood data check:');
+console.log('window.FLOOD_DATA:', window.FLOOD_DATA);
+console.log('window.floodPolygons:', window.floodPolygons);
+console.log('All window properties with "flood":', Object.keys(window).filter(k => k.toLowerCase().includes('flood')));
+
+// FLOOD_DATA 정규화
+if (!window.FLOOD_DATA && window.floodPolygons) {
+  window.FLOOD_DATA = window.floodPolygons;
+  console.log('✅ Set FLOOD_DATA from floodPolygons');
+}
+if (window.FLOOD_DATA) {
+  console.log('✅ FLOOD_DATA available for dams:', Object.keys(window.FLOOD_DATA));
+} else {
+  console.warn('⚠️ No flood data loaded');
+}
 
 // ════════════════════════════════════════════════════
 // 차수 전환
