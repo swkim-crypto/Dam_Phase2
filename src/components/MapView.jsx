@@ -1,8 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react'
+import * as Cesium from 'cesium'
 import { PRIORITY_CONFIG, estimateVolume, calcFsl } from '../data/candidates.js'
 import { damLengths } from '../data/damLengths.js'
+import 'cesium/Build/Cesium/Widgets/widgets.css'
 
-// ✅ 동적 로딩: 필요할 때만 floodPolygons 로드
+// Cesium 기본 설정
+Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI5N2UyMjcwOS00MDY1LTQxYjEtYjZjMy00YTU0ZTg1YmJjMGIiLCJpZCI6ODAzMDYsImlhdCI6MTY0Mjc0ODI2MX0.dkwAL1CcljUV7NA7fDbhXXnmyZQU_c-G5zRx8PtEcxE'
+
+// 동적 로딩: 필요할 때만 floodPolygons 로드
 let floodPolygonsCache = null
 
 async function loadFloodPolygons() {
@@ -24,29 +29,67 @@ function nearestStep(h) {
 }
 
 export default function MapView({ candidates, selected, heightM, onSelect, floodVisible }) {
-  const mapRef     = useRef(null)
-  const leafletMap = useRef(null)
-  const markers    = useRef({})
-  const floodLayer = useRef(null)
-  const damSymbol  = useRef(null)
+  const cesiumContainer = useRef(null)
+  const viewerRef = useRef(null)
+  const entitiesRef = useRef({
+    markers: [],
+    damSymbol: null,
+    floodPolygon: null
+  })
   
-  // ✅ 수몰 데이터 로딩 상태
   const [floodPolygons, setFloodPolygons] = useState(null)
   const [isLoadingFlood, setIsLoadingFlood] = useState(false)
 
-  // 지도 초기화
+  // Cesium Viewer 초기화
   useEffect(() => {
-    if (leafletMap.current || !window.L) return
-    const map = window.L.map(mapRef.current, {
-      center:[18.9, 103.35], zoom:9, zoomControl:true, attributionControl:true
-    })
-    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom:18, attribution:'© OpenStreetMap | SRTM GL1'
-    }).addTo(map)
-    leafletMap.current = map
-  }, [])
+    if (viewerRef.current || !cesiumContainer.current) return
 
-  // ✅ 수몰 데이터 로딩 (floodVisible이 true가 될 때만)
+    const viewer = new Cesium.Viewer(cesiumContainer.current, {
+      terrainProvider: Cesium.createWorldTerrain(),
+      baseLayerPicker: false,
+      geocoder: false,
+      homeButton: false,
+      sceneModePicker: false,
+      navigationHelpButton: false,
+      animation: false,
+      timeline: false,
+      fullscreenButton: false,
+      vrButton: false,
+      infoBox: false,
+      selectionIndicator: false,
+      shadows: false,
+      shouldAnimate: false,
+    })
+
+    // 기본 카메라 위치 설정 (Nam Ngiep 유역)
+    viewer.camera.setView({
+      destination: Cesium.Cartesian3.fromDegrees(103.45, 18.85, 50000),
+      orientation: {
+        heading: Cesium.Math.toRadians(0),
+        pitch: Cesium.Math.toRadians(-45), // 45도 기울임
+        roll: 0.0
+      }
+    })
+
+    // 마우스 클릭 이벤트
+    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas)
+    handler.setInputAction((movement) => {
+      const pickedObject = viewer.scene.pick(movement.position)
+      if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.candidateData) {
+        onSelect(pickedObject.id.candidateData)
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK)
+
+    viewerRef.current = viewer
+
+    return () => {
+      handler.destroy()
+      viewer.destroy()
+      viewerRef.current = null
+    }
+  }, [onSelect])
+
+  // 수몰 데이터 로딩
   useEffect(() => {
     if (!floodVisible || floodPolygons) return
     
@@ -57,125 +100,150 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
     })
   }, [floodVisible, floodPolygons])
 
-  // 수몰 폴리곤
+  // 댐 마커 렌더링
   useEffect(() => {
-    const L = window.L, map = leafletMap.current
-    if (!L || !map || !selected) return
-    if (floodLayer.current) { floodLayer.current.remove(); floodLayer.current = null }
-    if (!floodVisible || !floodPolygons) return
+    const viewer = viewerRef.current
+    if (!viewer || !candidates || candidates.length === 0) return
+
+    // 기존 마커 제거
+    entitiesRef.current.markers.forEach(entity => viewer.entities.remove(entity))
+    entitiesRef.current.markers = []
+
+    candidates.forEach(c => {
+      const cfg = PRIORITY_CONFIG[c.priority]
+      const isSel = selected?.id === c.id
+      const v = isSel ? estimateVolume(c, heightM) : c.baseV
+      const fsl = isSel ? calcFsl(c, heightM) : c.baseFsl
+      const h = isSel ? heightM : c.baseH
+      const sz = isSel ? 46 : 30
+
+      // Cesium 엔티티 생성 - clampToGround로 지면에 붙임
+      const entity = viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(c.lon, c.lat, 0),
+        billboard: {
+          image: createMarkerCanvas(c.id, sz, cfg.color, isSel),
+          width: sz,
+          height: sz,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, // 🔥 지면에 붙임
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          scaleByDistance: new Cesium.NearFarScalar(1000, 1.0, 100000, 0.4)
+        },
+        candidateData: c // 클릭 이벤트용 데이터
+      })
+
+      entitiesRef.current.markers.push(entity)
+    })
+  }, [candidates, selected, heightM])
+
+  // 댐 심볼 (역사다리꼴) 렌더링
+  useEffect(() => {
+    const viewer = viewerRef.current
+    if (!viewer || !selected) return
+
+    // 기존 댐 심볼 제거
+    if (entitiesRef.current.damSymbol) {
+      viewer.entities.remove(entitiesRef.current.damSymbol)
+      entitiesRef.current.damSymbol = null
+    }
+
+    const steps = [40,50,60,70,80,90,100,110,120]
+    const nearest = steps.reduce((a,b) => Math.abs(b-heightM)<Math.abs(a-heightM)?b:a)
+    const lenM = damLengths[selected.id]?.[String(nearest)] ?? 800
+    const cfg = PRIORITY_CONFIG[selected.priority]
+
+    // 댐 길이를 위도/경도로 변환 (동서 방향으로 표시)
+    const halfLenDeg = (lenM / 2) / (111320 * Math.cos(selected.lat * Math.PI / 180))
+
+    // 역사다리꼴 폴리곤 (위가 넓고 아래가 좁음)
+    const topWidth = halfLenDeg
+    const bottomWidth = halfLenDeg * 0.5
+    const height = 0.0003 // 약간의 세로 크기
+
+    const positions = [
+      Cesium.Cartesian3.fromDegrees(selected.lon - topWidth, selected.lat + height/2, 0),
+      Cesium.Cartesian3.fromDegrees(selected.lon + topWidth, selected.lat + height/2, 0),
+      Cesium.Cartesian3.fromDegrees(selected.lon + bottomWidth, selected.lat - height/2, 0),
+      Cesium.Cartesian3.fromDegrees(selected.lon - bottomWidth, selected.lat - height/2, 0),
+    ]
+
+    const entity = viewer.entities.add({
+      polygon: {
+        hierarchy: positions,
+        material: Cesium.Color.fromCssColorString(cfg.color).withAlpha(0.7),
+        outline: true,
+        outlineColor: Cesium.Color.fromCssColorString(cfg.color),
+        outlineWidth: 2,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, // 🔥 지면에 붙임
+        classificationType: Cesium.ClassificationType.TERRAIN
+      }
+    })
+
+    entitiesRef.current.damSymbol = entity
+  }, [selected, heightM])
+
+  // 수몰 폴리곤 렌더링
+  useEffect(() => {
+    const viewer = viewerRef.current
+    if (!viewer || !selected || !floodVisible || !floodPolygons) return
+
+    // 기존 수몰 폴리곤 제거
+    if (entitiesRef.current.floodPolygon) {
+      viewer.entities.remove(entitiesRef.current.floodPolygon)
+      entitiesRef.current.floodPolygon = null
+    }
 
     const step = nearestStep(heightM)
     const polyData = floodPolygons[selected.id]?.[String(step)]
     if (!polyData) return
 
     try {
-      if (!map.getPane('floodPane')) {
-        map.createPane('floodPane')
-        map.getPane('floodPane').style.zIndex = 350
-      }
-      const layer = window.L.geoJSON({ type:'Feature', geometry: polyData }, {
-        pane:'floodPane',
-        style:{ color:'#1a7fbd', weight:1.5, opacity:0.85, fillColor:'#1e78ff', fillOpacity:0.30 }
-      }).addTo(map)
-      floodLayer.current = layer
-    } catch(e) { console.error('Flood polygon error:', e) }
-  }, [selected, heightM, floodVisible, floodPolygons])
+      // GeoJSON 좌표를 Cesium Cartesian3 배열로 변환
+      const coordinates = polyData.coordinates[0] // Polygon 첫 번째 링
+      const positions = coordinates.map(coord => 
+        Cesium.Cartesian3.fromDegrees(coord[0], coord[1], 0)
+      )
 
-  // 댐 심볼 (역사다리꼴) — 아래가 좁고 위가 넓은 올바른 댐 단면
-  useEffect(() => {
-    const L = window.L, map = leafletMap.current
-    if (!L || !map) return
-    if (damSymbol.current) { damSymbol.current.remove(); damSymbol.current = null }
-    if (!selected) return
-
-    const steps = [40,50,60,70,80,90,100,110,120]
-    const nearest = steps.reduce((a,b) => Math.abs(b-heightM)<Math.abs(a-heightM)?b:a)
-    const lenM = damLengths[selected.id]?.[String(nearest)]
-    const halfLenDeg = ((lenM ?? 800) / 2) / (111320 * Math.cos(selected.lat * Math.PI / 180))
-
-    // 역사다리꼴: 위(상류 수면쪽)가 넓고 아래(하상쪽)가 좁음
-    const svgW = 104  // 상단 전체 폭 (넓은 쪽)
-    const svgH = 32   // 높이
-    const botW = 52   // 하단 폭 (좁은 쪽)
-    const padBot = (svgW - botW) / 2  // 하단 좌우 여백
-
-    const pts = `0,0 ${svgW},0 ${padBot+botW},${svgH} ${padBot},${svgH}`
-
-    const cfg = PRIORITY_CONFIG[selected.priority]
-    const fillColor = cfg?.color ?? '#f0a500'
-
-    const svgHtml = `<svg width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="damGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${fillColor}" stop-opacity="0.9"/>
-          <stop offset="100%" stop-color="${fillColor}" stop-opacity="0.4"/>
-        </linearGradient>
-      </defs>
-      <polygon points="${pts}" fill="url(#damGrad)" stroke="${fillColor}" stroke-width="2"/>
-      <line x1="0" y1="1" x2="${svgW}" y2="1" stroke="#ffffff" stroke-width="2.5" opacity="0.9"/>
-    </svg>`
-
-    const icon = L.divIcon({
-      className: '',
-      iconSize: [svgW, svgH],
-      iconAnchor: [svgW/2, svgH],  // 하단 중앙을 앵커로 → 하상에 붙음
-      html: svgHtml,
-    })
-    damSymbol.current = L.marker([selected.lat, selected.lon], {
-      icon, zIndexOffset: 2000, interactive: false
-    }).addTo(map)
-  }, [selected, heightM])
-
-  // 마커
-  useEffect(() => {
-    const L = window.L, map = leafletMap.current
-    if (!L || !map) return
-    Object.values(markers.current).forEach(m => m.remove())
-    markers.current = {}
-
-    candidates.forEach(c => {
-      const cfg   = PRIORITY_CONFIG[c.priority]
-      const isSel = selected?.id === c.id
-      const v     = isSel ? estimateVolume(c, heightM) : c.baseV
-      const fsl   = isSel ? calcFsl(c, heightM) : c.baseFsl
-      const h     = isSel ? heightM : c.baseH
-      const sz    = isSel ? 46 : 30
-
-      const icon = L.divIcon({
-        className:'',
-        iconSize:[sz,sz], iconAnchor:[sz/2,sz/2],
-        html:`<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${cfg.color}${isSel?'':'99'};border:${isSel?3:2}px solid ${isSel?'#fff':cfg.color};display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:${isSel?12:9}px;font-weight:700;color:${isSel?'#0a1628':'#fff'};box-shadow:0 0 ${isSel?18:6}px ${cfg.color}99;cursor:pointer;">${c.id}</div>`,
+      const entity = viewer.entities.add({
+        polygon: {
+          hierarchy: positions,
+          material: Cesium.Color.fromCssColorString('#1e78ff').withAlpha(0.35),
+          outline: true,
+          outlineColor: Cesium.Color.fromCssColorString('#1a7fbd'),
+          outlineWidth: 2,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, // 🔥 지형을 따라 붙음
+          classificationType: Cesium.ClassificationType.TERRAIN
+        }
       })
 
-      const bedStr = c.bed   != null ? `Bed: ${c.bed} m EL<br/>` : ''
-      const fslStr = fsl     != null ? `FSL: ${fsl} m EL<br/>` : ''
-      const tip = `<div style="font-family:'Space Mono',monospace;font-size:12px;line-height:1.9;background:#0d2137;border:1px solid ${cfg.color}55;color:#e8eef4;padding:8px 12px;border-radius:8px;min-width:160px;">
-        <b style="color:${cfg.color};font-size:14px;">${c.id}</b> <span style="color:#a0bcd0">${c.priority}</span><br/>
-        ${bedStr}H: ${h} m<br/>${fslStr}
-        V: <b style="color:#00c4b4;">${v.toLocaleString()} Mm³</b></div>`
+      entitiesRef.current.floodPolygon = entity
+    } catch (e) {
+      console.error('Flood polygon error:', e)
+    }
+  }, [selected, heightM, floodVisible, floodPolygons])
 
-      const marker = L.marker([c.lat, c.lon], { icon, zIndexOffset: isSel ? 1000 : 0 })
-        .addTo(map)
-        .bindTooltip(tip, { permanent:false, direction:'top', offset:[0,-sz/2-4], opacity:1, className:'dam-tip' })
-        .on('click', () => onSelect(c))
-      markers.current[c.id] = marker
-    })
-  }, [candidates, selected, heightM, onSelect])
-
-  // 선택 시 지도 이동
+  // 선택된 후보지로 카메라 이동
   useEffect(() => {
-    const map = leafletMap.current
-    if (!map || !selected) return
-    map.setView([selected.lat, selected.lon], Math.max(map.getZoom(), 10), { animate:true })
+    const viewer = viewerRef.current
+    if (!viewer || !selected) return
+
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(selected.lon, selected.lat, 15000),
+      orientation: {
+        heading: Cesium.Math.toRadians(0),
+        pitch: Cesium.Math.toRadians(-45),
+        roll: 0.0
+      },
+      duration: 2.0
+    })
   }, [selected])
 
   const fslDisplay = selected ? calcFsl(selected, heightM) : null
 
   return (
     <div style={{ width:'100%', height:'100%', position:'relative' }}>
-      <div ref={mapRef} style={{ width:'100%', height:'100%' }} />
+      <div ref={cesiumContainer} style={{ width:'100%', height:'100%' }} />
 
-      {/* ✅ 수몰 데이터 로딩 표시 */}
+      {/* 수몰 데이터 로딩 표시 */}
       {isLoadingFlood && (
         <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%, -50%)', background:'rgba(13,33,55,0.95)', border:'1px solid rgba(30,120,255,0.4)', borderRadius:12, padding:'20px 30px', zIndex:2000, backdropFilter:'blur(12px)' }}>
           <div style={{ fontSize:14, color:'#1e78ff', fontFamily:'var(--font-mono)', textAlign:'center' }}>
@@ -218,7 +286,41 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
         </div>
       </div>
 
-      <style>{`.dam-tip.leaflet-tooltip{background:transparent!important;border:none!important;box-shadow:none!important;padding:0!important;}`}</style>
+      {/* 3D 뷰 컨트롤 안내 */}
+      <div style={{ position:'absolute', bottom:24, right:16, background:'rgba(13,33,55,0.92)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:10, padding:'8px 12px', zIndex:1000, backdropFilter:'blur(8px)' }}>
+        <div style={{ fontSize:10, color:'#5a7a90', fontFamily:'var(--font-mono)', marginBottom:4 }}>3D 뷰 컨트롤</div>
+        <div style={{ fontSize:11, color:'#c0d4e0', fontFamily:'var(--font-mono)' }}>🖱️ 좌클릭+드래그: 회전</div>
+        <div style={{ fontSize:11, color:'#c0d4e0', fontFamily:'var(--font-mono)' }}>🖱️ 우클릭+드래그: 이동</div>
+        <div style={{ fontSize:11, color:'#c0d4e0', fontFamily:'var(--font-mono)' }}>⚙️ 휠: 줌</div>
+      </div>
     </div>
   )
+}
+
+// 마커 캔버스 생성 함수
+function createMarkerCanvas(id, size, color, isSelected) {
+  const canvas = document.createElement('canvas')
+  const dpr = window.devicePixelRatio || 1
+  canvas.width = size * dpr
+  canvas.height = size * dpr
+  const ctx = canvas.getContext('2d')
+  ctx.scale(dpr, dpr)
+
+  // 원형 배경
+  ctx.beginPath()
+  ctx.arc(size/2, size/2, size/2, 0, 2 * Math.PI)
+  ctx.fillStyle = isSelected ? color : color + '99'
+  ctx.fill()
+  ctx.strokeStyle = isSelected ? '#fff' : color
+  ctx.lineWidth = isSelected ? 3 : 2
+  ctx.stroke()
+
+  // 텍스트
+  ctx.fillStyle = isSelected ? '#0a1628' : '#fff'
+  ctx.font = `700 ${isSelected ? 12 : 9}px "Space Mono", monospace`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(id, size/2, size/2)
+
+  return canvas
 }
