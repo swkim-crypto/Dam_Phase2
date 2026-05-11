@@ -521,7 +521,7 @@ function addDamSymbol(dam, phase) {
         fill='%23${hex}' fill-opacity='0.75' stroke='%23${hex}' stroke-width='1.5'/>
       <line x1='0' y1='1' x2='${svgW}' y2='1' stroke='white' stroke-width='2'/>
     </svg>`;
-    const alt = dam.elBase ? dam.elBase + 200 : 800;
+    const alt = dam.elBase ? dam.elBase + 20 : 800;  // 지형에 맞게 살짝만 올림
     const entity = viewer.entities.add({
       name: dam.name + ' 심볼',
       position: Cesium.Cartesian3.fromDegrees(dam.lon, dam.lat, alt),
@@ -675,7 +675,9 @@ function showDetail(dam) {
   }
   // 2차/3차: 로컬 폴리곤 데이터 (floods.js 로드 여부에 따라)
   else {
-    const hasFlood = window.FLOOD_DATA && window.FLOOD_DATA[dam.id];
+    // floods.js가 FLOOD_DATA 또는 floodPolygons로 정의될 수 있음
+    const FLOOD_DATA = window.FLOOD_DATA || window.floodPolygons || {};
+    const hasFlood = FLOOD_DATA[dam.id];
     if (hasFlood) {
       btn.textContent   = '💧 수몰 시뮬레이션 실행';
       btn.disabled      = false;
@@ -739,7 +741,8 @@ function runFloodSimGEE() {
 // 2차/3차: 로컬 폴리곤 데이터
 function runFloodLocal(damId) {
   clearFlood();
-  const data = window.FLOOD_DATA[damId];
+  const FLOOD_DATA = window.FLOOD_DATA || window.floodPolygons || {};
+  const data = FLOOD_DATA[damId];
   if (!data) return;
 
   // FLOOD_DATA[id] = { "40": {geojson}, "60": {geojson}, ... }
