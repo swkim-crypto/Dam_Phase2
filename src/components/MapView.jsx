@@ -4,7 +4,7 @@ import { floodPolygons } from '../data/floodPolygons.js'
 import { damLengths } from '../data/damLengths.js'
 
 function nearestStep(h) {
-  const steps = [40,50,60,70,80,90,100,110,120]
+  const steps = [40,60,80,100,120]
   return steps.reduce((a,b) => Math.abs(b-h) < Math.abs(a-h) ? b : a)
 }
 
@@ -32,7 +32,7 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
     const L = window.L, map = leafletMap.current
     if (!L || !map || !selected) return
     if (floodLayer.current) { floodLayer.current.remove(); floodLayer.current = null }
-    if (!floodVisible) return  // 버튼으로 숨김
+    if (!floodVisible) return
 
     const step = nearestStep(heightM)
     const polyData = floodPolygons[selected.id]?.[String(step)]
@@ -51,7 +51,7 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
     } catch(e) { console.error('Flood polygon error:', e) }
   }, [selected, heightM, floodVisible])
 
-  // 댐 심볼 (역사다리꼴) — 선택 시 표시
+  // 댐 심볼 (역사다리꼴) — 아래가 좁고 위가 넓은 올바른 댐 단면
   useEffect(() => {
     const L = window.L, map = leafletMap.current
     if (!L || !map) return
@@ -61,28 +61,42 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
     const steps = [40,50,60,70,80,90,100,110,120]
     const nearest = steps.reduce((a,b) => Math.abs(b-heightM)<Math.abs(a-heightM)?b:a)
     const lenM = damLengths[selected.id]?.[String(nearest)]
-    // 댐 길이: damLengths 있으면 사용, 없으면 기본 800m
     const halfLenDeg = ((lenM ?? 800) / 2) / (111320 * Math.cos(selected.lat * Math.PI / 180))
-    const damH = heightM  // 댐 높이(m) → 시각적 크기에 반영
 
-    // 역사다리꼴 SVG: 하부폭=길이, 상부폭=길이×1.3, 높이=비례
-    const px = 80, py = 28
-    const topW = px * 1.3, botW = px
-    const pad = (topW - botW) / 2
-    const svgW = topW, svgH = py
+    // 역사다리꼴: 위(상류 수면쪽)가 넓고 아래(하상쪽)가 좁음
+    // SVG 좌표계: y=0이 위, y=svgH가 아래
+    // 댐 단면: 상단(y=0)이 넓은 관측면, 하단(y=svgH)이 좁은 하상면
+    const svgW = 104  // 상단 전체 폭 (넓은 쪽)
+    const svgH = 32   // 높이
+    const botW = 52   // 하단 폭 (좁은 쪽)
+    const padBot = (svgW - botW) / 2  // 하단 좌우 여백
+
+    // 꼭짓점: 좌상(0,0) → 우상(svgW,0) → 우하(padBot+botW, svgH) → 좌하(padBot, svgH)
+    const pts = `0,0 ${svgW},0 ${padBot+botW},${svgH} ${padBot},${svgH}`
+
+    const cfg = PRIORITY_CONFIG[selected.priority]
+    const fillColor = cfg?.color ?? '#f0a500'
+
     const svgHtml = `<svg width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="${pad},0 ${pad+botW},0 ${svgW},${svgH} 0,${svgH}"
-        fill="${selected ? '#f0a50088' : 'none'}" stroke="#f0a500" stroke-width="2"/>
-      <line x1="0" y1="0" x2="${svgW}" y2="0" stroke="white" stroke-width="2.5"/>
+      <defs>
+        <linearGradient id="damGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${fillColor}" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="${fillColor}" stop-opacity="0.4"/>
+        </linearGradient>
+      </defs>
+      <polygon points="${pts}" fill="url(#damGrad)" stroke="${fillColor}" stroke-width="2"/>
+      <line x1="0" y1="1" x2="${svgW}" y2="1" stroke="#ffffff" stroke-width="2.5" opacity="0.9"/>
     </svg>`
 
     const icon = L.divIcon({
       className: '',
       iconSize: [svgW, svgH],
-      iconAnchor: [svgW/2, svgH],
+      iconAnchor: [svgW/2, svgH],  // 하단 중앙을 앵커로 → 하상에 붙음
       html: svgHtml,
     })
-    damSymbol.current = L.marker([selected.lat, selected.lon], { icon, zIndexOffset: 2000, interactive: false }).addTo(map)
+    damSymbol.current = L.marker([selected.lat, selected.lon], {
+      icon, zIndexOffset: 2000, interactive: false
+    }).addTo(map)
   }, [selected, heightM])
 
   // 마커
@@ -106,7 +120,6 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
         html:`<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${cfg.color}${isSel?'':'99'};border:${isSel?3:2}px solid ${isSel?'#fff':cfg.color};display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:${isSel?12:9}px;font-weight:700;color:${isSel?'#0a1628':'#fff'};box-shadow:0 0 ${isSel?18:6}px ${cfg.color}99;cursor:pointer;">${c.id}</div>`,
       })
 
-      // null-safe 툴팁 (Phase 2는 bed/fsl null 가능)
       const bedStr = c.bed   != null ? `Bed: ${c.bed} m EL<br/>` : ''
       const fslStr = fsl     != null ? `FSL: ${fsl} m EL<br/>` : ''
       const tip = `<div style="font-family:'Space Mono',monospace;font-size:12px;line-height:1.9;background:#0d2137;border:1px solid ${cfg.color}55;color:#e8eef4;padding:8px 12px;border-radius:8px;min-width:160px;">
@@ -129,7 +142,6 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
     map.setView([selected.lat, selected.lon], Math.max(map.getZoom(), 10), { animate:true })
   }, [selected])
 
-  // null-safe FSL 표시
   const fslDisplay = selected ? calcFsl(selected, heightM) : null
 
   return (
@@ -159,6 +171,14 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
         <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', marginTop:6, paddingTop:6, display:'flex', alignItems:'center', gap:8 }}>
           <div style={{ width:18, height:10, background:'rgba(30,120,255,0.35)', border:'1.5px solid #1a7fbd', borderRadius:2 }}/>
           <span style={{ fontSize:11, color:'#c0d4e0', fontFamily:'var(--font-mono)' }}>수몰 예상 구역</span>
+        </div>
+        {/* 댐 심볼 범례 */}
+        <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', marginTop:6, paddingTop:6, display:'flex', alignItems:'center', gap:8 }}>
+          <svg width="22" height="12" viewBox="0 0 22 12">
+            <polygon points="0,0 22,0 16,12 6,12" fill="rgba(240,165,0,0.5)" stroke="#f0a500" strokeWidth="1.5"/>
+            <line x1="0" y1="1" x2="22" y2="1" stroke="#ffffff" strokeWidth="1.5" opacity="0.9"/>
+          </svg>
+          <span style={{ fontSize:11, color:'#c0d4e0', fontFamily:'var(--font-mono)' }}>댐 위치</span>
         </div>
       </div>
 

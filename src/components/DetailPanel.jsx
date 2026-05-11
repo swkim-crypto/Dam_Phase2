@@ -3,9 +3,13 @@ import { estimateVolume, estimateArea, calcFsl, calcEfficiency, estimateEvap, PR
 import { damLengths } from '../data/damLengths.js'
 import ProfileChart from './ProfileChart.jsx'
 
-// Phase 2(C1~C5)인지 판별 — bed/baseArea가 null이면 근사치 모드
-// C계열: bed=null → 근사치 모드 / T계열: bed 있음 + profiles 있음 → 정상
 const isApproxMode = (c) => c.bed == null
+
+// floodPolygons와 동일한 5단계
+function nearestFloodStep(h) {
+  const steps = [40,60,80,100,120]
+  return steps.reduce((a,b) => Math.abs(b-h) < Math.abs(a-h) ? b : a)
+}
 
 function StatCard({ label, value, unit, sub }) {
   const display = value == null ? '—' : value
@@ -36,10 +40,9 @@ export default function DetailPanel({ candidate, heightM, onHeightChange, floodV
 
   const damLength = useMemo(() => {
     if (!candidate) return null
-    const steps = [40,50,60,70,80,90,100,110,120]
-    const nearest = steps.reduce((a,b) => Math.abs(b-heightM)<Math.abs(a-heightM)?b:a)
+    const nearest = nearestFloodStep(heightM)
     return damLengths[candidate.id]?.[String(nearest)] ?? null
-  }, [candidate, heightM, approx])
+  }, [candidate, heightM])
 
   if (!candidate || !stats) return null
   const cfg    = PRIORITY_CONFIG[candidate.priority]
@@ -137,7 +140,7 @@ export default function DetailPanel({ candidate, heightM, onHeightChange, floodV
           <StatCard label="증발 손실"     value={stats.evap} unit="Mm³/yr"  sub="1,500mm/yr" />
         </div>
 
-        {/* 단면 차트 — Phase 2는 프로파일 데이터 없음 */}
+        {/* 단면 차트 */}
         {!approx
           ? <ProfileChart candidate={candidate} heightM={heightM} />
           : (
