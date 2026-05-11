@@ -1,17 +1,19 @@
 import React, { useEffect, useRef } from 'react'
 import { PRIORITY_CONFIG, estimateVolume, calcFsl } from '../data/candidates.js'
 import { floodPolygons } from '../data/floodPolygons.js'
+import { damLengths } from '../data/damLengths.js'
 
 function nearestStep(h) {
   const steps = [40,50,60,70,80,90,100,110,120]
   return steps.reduce((a,b) => Math.abs(b-h) < Math.abs(a-h) ? b : a)
 }
 
-export default function MapView({ candidates, selected, heightM, onSelect }) {
+export default function MapView({ candidates, selected, heightM, onSelect, floodVisible }) {
   const mapRef     = useRef(null)
   const leafletMap = useRef(null)
   const markers    = useRef({})
   const floodLayer = useRef(null)
+  const damSymbol  = useRef(null)
 
   // 지도 초기화
   useEffect(() => {
@@ -25,15 +27,16 @@ export default function MapView({ candidates, selected, heightM, onSelect }) {
     leafletMap.current = map
   }, [])
 
-  // 수몰 폴리곤 — Phase 2(C1~C5)는 데이터 없으므로 안전하게 skip
+  // 수몰 폴리곤
   useEffect(() => {
     const L = window.L, map = leafletMap.current
     if (!L || !map || !selected) return
     if (floodLayer.current) { floodLayer.current.remove(); floodLayer.current = null }
+    if (!floodVisible) return  // 버튼으로 숨김
 
     const step = nearestStep(heightM)
     const polyData = floodPolygons[selected.id]?.[String(step)]
-    if (!polyData) return  // 데이터 없으면 그냥 skip
+    if (!polyData) return
 
     try {
       if (!map.getPane('floodPane')) {
@@ -46,6 +49,40 @@ export default function MapView({ candidates, selected, heightM, onSelect }) {
       }).addTo(map)
       floodLayer.current = layer
     } catch(e) { console.error('Flood polygon error:', e) }
+  }, [selected, heightM, floodVisible])
+
+  // 댐 심볼 (역사다리꼴) — 선택 시 표시
+  useEffect(() => {
+    const L = window.L, map = leafletMap.current
+    if (!L || !map) return
+    if (damSymbol.current) { damSymbol.current.remove(); damSymbol.current = null }
+    if (!selected) return
+
+    const steps = [40,50,60,70,80,90,100,110,120]
+    const nearest = steps.reduce((a,b) => Math.abs(b-heightM)<Math.abs(a-heightM)?b:a)
+    const lenM = damLengths[selected.id]?.[String(nearest)]
+    // 댐 길이: damLengths 있으면 사용, 없으면 기본 800m
+    const halfLenDeg = ((lenM ?? 800) / 2) / (111320 * Math.cos(selected.lat * Math.PI / 180))
+    const damH = heightM  // 댐 높이(m) → 시각적 크기에 반영
+
+    // 역사다리꼴 SVG: 하부폭=길이, 상부폭=길이×1.3, 높이=비례
+    const px = 80, py = 28
+    const topW = px * 1.3, botW = px
+    const pad = (topW - botW) / 2
+    const svgW = topW, svgH = py
+    const svgHtml = `<svg width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="${pad},0 ${pad+botW},0 ${svgW},${svgH} 0,${svgH}"
+        fill="${selected ? '#f0a50088' : 'none'}" stroke="#f0a500" stroke-width="2"/>
+      <line x1="0" y1="0" x2="${svgW}" y2="0" stroke="white" stroke-width="2.5"/>
+    </svg>`
+
+    const icon = L.divIcon({
+      className: '',
+      iconSize: [svgW, svgH],
+      iconAnchor: [svgW/2, svgH],
+      html: svgHtml,
+    })
+    damSymbol.current = L.marker([selected.lat, selected.lon], { icon, zIndexOffset: 2000, interactive: false }).addTo(map)
   }, [selected, heightM])
 
   // 마커

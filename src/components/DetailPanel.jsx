@@ -21,7 +21,7 @@ function StatCard({ label, value, unit, sub }) {
   )
 }
 
-export default function DetailPanel({ candidate, heightM, onHeightChange }) {
+export default function DetailPanel({ candidate, heightM, onHeightChange, floodVisible, onFloodToggle }) {
   const approx = candidate ? isApproxMode(candidate) : false
 
   const stats = useMemo(() => {
@@ -67,6 +67,20 @@ export default function DetailPanel({ candidate, heightM, onHeightChange }) {
       </div>
 
       <div style={{ overflow:'auto', flex:1, padding:'8px 12px 0' }}>
+
+        {/* 수몰 시뮬레이션 버튼 */}
+        <div style={{ display:'flex', gap:6, marginBottom:8 }}>
+          <button onClick={onFloodToggle} style={{
+            flex:1, padding:'7px 0', fontSize:12, fontWeight:700,
+            fontFamily:'var(--font-mono)', cursor:'pointer', borderRadius:6,
+            background: floodVisible ? 'rgba(30,120,255,0.2)' : 'transparent',
+            color: floodVisible ? '#1e78ff' : '#7a9bb5',
+            border:`1px solid ${floodVisible ? '#1a7fbd' : 'rgba(255,255,255,0.12)'}`,
+            transition:'all 0.2s',
+          }}>
+            💧 수몰 시뮬레이션 {floodVisible ? '숨기기' : '실행'}
+          </button>
+        </div>
 
         {/* 높이 조정 */}
         <div style={{ background:'var(--bg-card)', border:'1px solid var(--border-acc)', borderRadius:8, padding:'8px 12px', marginBottom:8 }}>

@@ -11,6 +11,10 @@ export default function App() {
 
   const [selected, setSelected] = useState(() => getCandidatesByPhase(CURRENT_PHASE)[0])
   const [heightM, setHeightM] = useState(60)
+  const [floodVisible, setFloodVisible] = useState(true)
+
+  const handleFloodToggle = () => setFloodVisible(v => !v)
+  const handleSelect = (c) => { setSelected(c); setHeightM(60); setFloodVisible(true) }
 
   const handlePhaseChange = (newPhase) => {
     setPhase(newPhase)
@@ -20,7 +24,6 @@ export default function App() {
     setHeightM(60)
   }
 
-  const handleSelect = (c) => { setSelected(c); setHeightM(60) }
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden', background:'var(--bg-deep)' }}>
@@ -34,9 +37,9 @@ export default function App() {
           onPhaseChange={handlePhaseChange}
         />
         <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
-          <MapView candidates={candidates} selected={selected} heightM={heightM} onSelect={handleSelect} />
+          <MapView candidates={candidates} selected={selected} heightM={heightM} onSelect={handleSelect} floodVisible={floodVisible} />
         </div>
-        <DetailPanel candidate={selected} heightM={heightM} onHeightChange={setHeightM} />
+        <DetailPanel candidate={selected} heightM={heightM} onHeightChange={setHeightM} floodVisible={floodVisible} onFloodToggle={handleFloodToggle} />
       </div>
     </div>
   )

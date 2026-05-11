@@ -103,7 +103,7 @@ export default function Sidebar({ candidates, selected, onSelect, phase, onPhase
                       <span style={{ fontSize:10, padding:'2px 8px', background:`${cfg.color}22`, color:cfg.color, border:`1px solid ${cfg.color}66`, borderRadius:10, fontFamily:'var(--font-mono)', fontWeight:700 }}>{c.priority}</span>
                     </div>
                     <div style={{ fontSize:11, color:'var(--text-pri)', fontFamily:'var(--font-mono)', opacity:0.75 }}>
-                      {c.bed != null ? `Bed ${c.bed}m · ` : ''}V {c.baseV.toLocaleString()} Mm³
+                      {c.bed != null ? `Bed ${c.bed}m · ` : ''}V {(c.baseV ?? c.storage_H50 ?? 0).toLocaleString()} Mm³
                     </div>
                     <div style={{ fontSize:10, fontFamily:'var(--font-mono)', color: c.hMin5 <= 60 ? '#1D9E75' : c.hMin5 <= 90 ? '#BA7517' : '#E05C5C' }}>
                       5Mm³: H≥{c.hMin5}m {c.hMin5 <= 60 ? '✓' : c.hMin5 <= 90 ? '△' : '⚠'}
