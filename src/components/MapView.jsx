@@ -1,7 +1,22 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { PRIORITY_CONFIG, estimateVolume, calcFsl } from '../data/candidates.js'
-import { floodPolygons } from '../data/floodPolygons.js'
 import { damLengths } from '../data/damLengths.js'
+
+// ✅ 동적 로딩: 필요할 때만 floodPolygons 로드
+let floodPolygonsCache = null
+
+async function loadFloodPolygons() {
+  if (floodPolygonsCache) return floodPolygonsCache
+  try {
+    const module = await import('../data/floods.js')
+    floodPolygonsCache = module.floodPolygons
+    console.log('✅ Flood polygons loaded')
+    return floodPolygonsCache
+  } catch (err) {
+    console.error('❌ Failed to load flood polygons:', err)
+    return null
+  }
+}
 
 function nearestStep(h) {
   const steps = [40,60,80,100,120]
@@ -14,6 +29,10 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
   const markers    = useRef({})
   const floodLayer = useRef(null)
   const damSymbol  = useRef(null)
+  
+  // ✅ 수몰 데이터 로딩 상태
+  const [floodPolygons, setFloodPolygons] = useState(null)
+  const [isLoadingFlood, setIsLoadingFlood] = useState(false)
 
   // 지도 초기화
   useEffect(() => {
@@ -27,12 +46,23 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
     leafletMap.current = map
   }, [])
 
+  // ✅ 수몰 데이터 로딩 (floodVisible이 true가 될 때만)
+  useEffect(() => {
+    if (!floodVisible || floodPolygons) return
+    
+    setIsLoadingFlood(true)
+    loadFloodPolygons().then(data => {
+      setFloodPolygons(data)
+      setIsLoadingFlood(false)
+    })
+  }, [floodVisible, floodPolygons])
+
   // 수몰 폴리곤
   useEffect(() => {
     const L = window.L, map = leafletMap.current
     if (!L || !map || !selected) return
     if (floodLayer.current) { floodLayer.current.remove(); floodLayer.current = null }
-    if (!floodVisible) return
+    if (!floodVisible || !floodPolygons) return
 
     const step = nearestStep(heightM)
     const polyData = floodPolygons[selected.id]?.[String(step)]
@@ -49,7 +79,7 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
       }).addTo(map)
       floodLayer.current = layer
     } catch(e) { console.error('Flood polygon error:', e) }
-  }, [selected, heightM, floodVisible])
+  }, [selected, heightM, floodVisible, floodPolygons])
 
   // 댐 심볼 (역사다리꼴) — 아래가 좁고 위가 넓은 올바른 댐 단면
   useEffect(() => {
@@ -64,14 +94,11 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
     const halfLenDeg = ((lenM ?? 800) / 2) / (111320 * Math.cos(selected.lat * Math.PI / 180))
 
     // 역사다리꼴: 위(상류 수면쪽)가 넓고 아래(하상쪽)가 좁음
-    // SVG 좌표계: y=0이 위, y=svgH가 아래
-    // 댐 단면: 상단(y=0)이 넓은 관측면, 하단(y=svgH)이 좁은 하상면
     const svgW = 104  // 상단 전체 폭 (넓은 쪽)
     const svgH = 32   // 높이
     const botW = 52   // 하단 폭 (좁은 쪽)
     const padBot = (svgW - botW) / 2  // 하단 좌우 여백
 
-    // 꼭짓점: 좌상(0,0) → 우상(svgW,0) → 우하(padBot+botW, svgH) → 좌하(padBot, svgH)
     const pts = `0,0 ${svgW},0 ${padBot+botW},${svgH} ${padBot},${svgH}`
 
     const cfg = PRIORITY_CONFIG[selected.priority]
@@ -147,6 +174,15 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
   return (
     <div style={{ width:'100%', height:'100%', position:'relative' }}>
       <div ref={mapRef} style={{ width:'100%', height:'100%' }} />
+
+      {/* ✅ 수몰 데이터 로딩 표시 */}
+      {isLoadingFlood && (
+        <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%, -50%)', background:'rgba(13,33,55,0.95)', border:'1px solid rgba(30,120,255,0.4)', borderRadius:12, padding:'20px 30px', zIndex:2000, backdropFilter:'blur(12px)' }}>
+          <div style={{ fontSize:14, color:'#1e78ff', fontFamily:'var(--font-mono)', textAlign:'center' }}>
+            수몰 데이터 로딩 중...
+          </div>
+        </div>
+      )}
 
       {/* 수몰 정보 오버레이 */}
       {selected && (
