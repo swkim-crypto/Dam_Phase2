@@ -24,22 +24,22 @@ export const PHASES = {
   },
   3: {
     label:     '3차',
-    date:      '진행중',
-    method:    '소유역 경계 + DEM 정밀',
-    criterion: '미정',
-    demSource: '미정',
-    note:      '소유역 완성 후 집수면적 기반 정밀 저수량 재산정 예정',
+    date:      '2026-05',
+    method:    'SRTM DEM + Order-6 유향/유역 분석',
+    criterion: '집수면적 ≥ 900km², 경사 > 0.003, 저수량 ≥ 5Mm³',
+    demSource: 'SRTM GL1 30m',
+    note:      '575개 하천 세그먼트 → Order-6 필터 → 경사·집수면적 조건 → 5km 클러스터링 → T1~T9 선정',
   },
 }
 
-export const CURRENT_PHASE = 2
+export const CURRENT_PHASE = 3
 
 export const BASIN = {
   id:              'NAM_NGIEP',
   name:            'Nam Ngiep',
   namKo:           '남니옙',
   country:         'Laos',
-  totalCandidates: 8,
+  totalCandidates: 23,
   demSource:       'SRTM GL1 30m',
   analysisDate:    '2026-05',
   criterion:       '상류 저수량 ≥ 5Mm³',
@@ -149,7 +149,80 @@ const phase2Candidates = [
 ]
 
 // Phase 3 — 소유역 완성 후 추가
-const phase3Candidates = []
+const phase3Candidates = [
+  {
+    id:'T1', lat:18.5847, lon:103.60487,
+    bed:161, baseFsl:null, baseH:60, baseV:23.7, baseArea:null, hMin5:30,
+    region:'Lower Valley', priority:'2순위',
+    storage_H20:3.8, storage_H30:8.5, storage_H50:23.7, storage_H80:60.6,
+    upland_skm:4114, slope:0.00392, ord_stra:6, linkno:2686,
+    note:'Order-6 메인하천 (LINKNO=2686). 경사=0.0039, 집수면적=4,114km². H=30m에서 5Mm³ 달성.',
+  },
+  {
+    id:'T2', lat:18.64993, lon:103.56365,
+    bed:171, baseFsl:null, baseH:60, baseV:21.1, baseArea:null, hMin5:30,
+    region:'Lower Valley', priority:'2순위',
+    storage_H20:3.4, storage_H30:7.6, storage_H50:21.1, storage_H80:53.9,
+    upland_skm:3663, slope:0.00438, ord_stra:6, linkno:2674,
+    note:'Order-6 메인하천 (LINKNO=2674). 경사=0.0044, 집수면적=3,663km². H=30m에서 5Mm³ 달성.',
+  },
+  {
+    id:'T3', lat:18.64763, lon:103.51382,
+    bed:204, baseFsl:null, baseH:60, baseV:20.8, baseArea:null, hMin5:30,
+    region:'Lower Valley', priority:'최우선',
+    storage_H20:3.3, storage_H30:7.5, storage_H50:20.8, storage_H80:53.3,
+    upland_skm:3619, slope:0.01614, ord_stra:6, linkno:2671,
+    note:'Order-6 메인하천 (LINKNO=2671). 경사=0.0161, 집수면적=3,619km². H=30m에서 5Mm³ 달성.',
+  },
+  {
+    id:'T4', lat:18.67646, lon:103.46457,
+    bed:224, baseFsl:null, baseH:60, baseV:20.6, baseArea:null, hMin5:30,
+    region:'Lower Valley', priority:'최우선',
+    storage_H20:3.3, storage_H30:7.4, storage_H50:20.6, storage_H80:52.8,
+    upland_skm:3587, slope:0.01755, ord_stra:6, linkno:2661,
+    note:'Order-6 메인하천 (LINKNO=2661). 경사=0.0175, 집수면적=3,587km². H=30m에서 5Mm³ 달성.',
+  },
+  {
+    id:'T5', lat:18.71776, lon:103.4384,
+    bed:238, baseFsl:null, baseH:60, baseV:19.2, baseArea:null, hMin5:30,
+    region:'Lower Valley', priority:'2순위',
+    storage_H20:3.1, storage_H30:6.9, storage_H50:19.2, storage_H80:49.1,
+    upland_skm:3338, slope:0.00823, ord_stra:6, linkno:2650,
+    note:'Order-6 메인하천 (LINKNO=2650). 경사=0.0082, 집수면적=3,338km². H=30m에서 5Mm³ 달성.',
+  },
+  {
+    id:'T6', lat:18.82496, lon:103.42451,
+    bed:246, baseFsl:null, baseH:60, baseV:15.9, baseArea:null, hMin5:30,
+    region:'Middle Basin', priority:'2순위',
+    storage_H20:2.5, storage_H30:5.7, storage_H50:15.9, storage_H80:40.6,
+    upland_skm:2760, slope:0.0049, ord_stra:6, linkno:2634,
+    note:'Order-6 메인하천 (LINKNO=2634). 경사=0.0049, 집수면적=2,760km². H=30m에서 5Mm³ 달성.',
+  },
+  {
+    id:'T7', lat:18.86429, lon:103.45685,
+    bed:262, baseFsl:null, baseH:60, baseV:15.3, baseArea:null, hMin5:30,
+    region:'Middle Basin', priority:'2순위',
+    storage_H20:2.5, storage_H30:5.5, storage_H50:15.3, storage_H80:39.2,
+    upland_skm:2665, slope:0.00641, ord_stra:6, linkno:2627,
+    note:'Order-6 메인하천 (LINKNO=2627). 경사=0.0064, 집수면적=2,665km². H=30m에서 5Mm³ 달성.',
+  },
+  {
+    id:'T8', lat:19.07826, lon:103.34716,
+    bed:327, baseFsl:null, baseH:60, baseV:8.9, baseArea:null, hMin5:50,
+    region:'Upper Basin', priority:'검토필요',
+    storage_H20:1.4, storage_H30:3.2, storage_H50:8.9, storage_H80:22.8,
+    upland_skm:1552, slope:0.00424, ord_stra:6, linkno:2591,
+    note:'Order-6 메인하천 (LINKNO=2591). 경사=0.0042, 집수면적=1,552km². H=50m에서 5Mm³ 달성.',
+  },
+  {
+    id:'T9', lat:19.14041, lon:103.33477,
+    bed:395, baseFsl:null, baseH:60, baseV:5.3, baseArea:null, hMin5:50,
+    region:'Upper Basin', priority:'검토필요',
+    storage_H20:0.9, storage_H30:1.9, storage_H50:5.3, storage_H80:13.6,
+    upland_skm:924, slope:0.03221, ord_stra:6, linkno:2580,
+    note:'Order-6 메인하천 (LINKNO=2580). 경사=0.0322, 집수면적=924km². H=50m에서 5Mm³ 달성.',
+  },
+]
 
 const PHASE_CANDIDATES = {
   1: phase1Candidates,
@@ -160,7 +233,7 @@ const PHASE_CANDIDATES = {
 export const getCandidatesByPhase = (phase) => PHASE_CANDIDATES[phase] ?? []
 
 // 하위 호환 (기존 코드가 직접 참조하는 경우)
-export const candidates = phase2Candidates
+export const candidates = phase3Candidates
 
 // ── 저수량 추정 ───────────────────────────────────
 // Phase 2(C1~C5): 시나리오 직접 보간
