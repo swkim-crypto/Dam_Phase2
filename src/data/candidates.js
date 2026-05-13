@@ -1,274 +1,983 @@
-// Nam Ngiep Basin — 댐 후보지
-// ──────────────────────────────────────────────────
-// Phase 1 (2026-04): SRTM GL1 + flood-fill, S1~S9
-// Phase 2 (2026-05): HydroRIVERS + 유향 적용, C1~C5
-// Phase 3~: 소유역 완성 후 정밀 분석 예정
-// ──────────────────────────────────────────────────
+export const candidates = [
+  {
+    id: 'S1',
+    lat: 19.14589,
+    lon: 103.26616,
+    bed: 933,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1043,
+    baseH: 110,
+    baseV: 5083.1,
+    baseArea: 0,  // To be calculated
+    damLength: 90,
+    streamOrder: 3,
+    drainageArea: 62.7,
+    hMin5: 110,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S2',
+    lat: 19.21204,
+    lon: 103.37419,
+    bed: 1004,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1124,
+    baseH: 120,
+    baseV: 3248.5,
+    baseArea: 0,  // To be calculated
+    damLength: 120,
+    streamOrder: 4,
+    drainageArea: 63.3,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S3',
+    lat: 19.32754,
+    lon: 103.40422,
+    bed: 1074,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1194,
+    baseH: 120,
+    baseV: 2730.1,
+    baseArea: 0,  // To be calculated
+    damLength: 60,
+    streamOrder: 4,
+    drainageArea: 113.0,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S4',
+    lat: 19.16126,
+    lon: 103.25640,
+    bed: 1160,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1280,
+    baseH: 120,
+    baseV: 2627.2,
+    baseArea: 0,  // To be calculated
+    damLength: 120,
+    streamOrder: 3,
+    drainageArea: 62.7,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S5',
+    lat: 18.51183,
+    lon: 103.60552,
+    bed: 181,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 301,
+    baseH: 120,
+    baseV: 2591.0,
+    baseArea: 0,  // To be calculated
+    damLength: 60,
+    streamOrder: 3,
+    drainageArea: 57.3,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S6',
+    lat: 19.36608,
+    lon: 103.28702,
+    bed: 1110,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1230,
+    baseH: 120,
+    baseV: 2571.4,
+    baseArea: 0,  // To be calculated
+    damLength: 120,
+    streamOrder: 3,
+    drainageArea: 50.3,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S7',
+    lat: 18.73019,
+    lon: 103.58150,
+    bed: 195,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 305,
+    baseH: 110,
+    baseV: 2551.3,
+    baseArea: 0,  // To be calculated
+    damLength: 90,
+    streamOrder: 4,
+    drainageArea: 146.3,
+    hMin5: 110,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S8',
+    lat: 19.02466,
+    lon: 103.38857,
+    bed: 344,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 454,
+    baseH: 110,
+    baseV: 2539.1,
+    baseArea: 0,  // To be calculated
+    damLength: 60,
+    streamOrder: 4,
+    drainageArea: 53.4,
+    hMin5: 110,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S9',
+    lat: 19.05438,
+    lon: 103.31970,
+    bed: 367,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 477,
+    baseH: 110,
+    baseV: 2532.0,
+    baseArea: 0,  // To be calculated
+    damLength: 90,
+    streamOrder: 4,
+    drainageArea: 138.5,
+    hMin5: 110,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S10',
+    lat: 19.33754,
+    lon: 103.36183,
+    bed: 1070,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1190,
+    baseH: 120,
+    baseV: 2530.3,
+    baseArea: 0,  // To be calculated
+    damLength: 90,
+    streamOrder: 4,
+    drainageArea: 103.0,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S11',
+    lat: 19.33425,
+    lon: 103.42484,
+    bed: 1075,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1195,
+    baseH: 120,
+    baseV: 2529.5,
+    baseArea: 0,  // To be calculated
+    damLength: 60,
+    streamOrder: 4,
+    drainageArea: 100.0,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S12',
+    lat: 19.30751,
+    lon: 103.16224,
+    bed: 1085,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1205,
+    baseH: 120,
+    baseV: 2447.1,
+    baseArea: 0,  // To be calculated
+    damLength: 30,
+    streamOrder: 4,
+    drainageArea: 108.5,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S13',
+    lat: 19.30134,
+    lon: 103.11064,
+    bed: 1103,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1203,
+    baseH: 100,
+    baseV: 2411.0,
+    baseArea: 0,  // To be calculated
+    damLength: 180,
+    streamOrder: 4,
+    drainageArea: 56.9,
+    hMin5: 100,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S14',
+    lat: 19.32778,
+    lon: 103.46455,
+    bed: 1105,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1225,
+    baseH: 120,
+    baseV: 2359.1,
+    baseArea: 0,  // To be calculated
+    damLength: 30,
+    streamOrder: 3,
+    drainageArea: 62.4,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S15',
+    lat: 18.94155,
+    lon: 103.52052,
+    bed: 323,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 433,
+    baseH: 110,
+    baseV: 2353.0,
+    baseArea: 0,  // To be calculated
+    damLength: 60,
+    streamOrder: 4,
+    drainageArea: 84.8,
+    hMin5: 110,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S16',
+    lat: 18.72257,
+    lon: 103.39365,
+    bed: 272,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 372,
+    baseH: 100,
+    baseV: 2340.7,
+    baseArea: 0,  // To be calculated
+    damLength: 30,
+    streamOrder: 4,
+    drainageArea: 118.0,
+    hMin5: 100,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S17',
+    lat: 18.77034,
+    lon: 103.59390,
+    bed: 220,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 340,
+    baseH: 120,
+    baseV: 2304.1,
+    baseArea: 0,  // To be calculated
+    damLength: 120,
+    streamOrder: 3,
+    drainageArea: 68.7,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S18',
+    lat: 18.71656,
+    lon: 103.42668,
+    bed: 237,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 357,
+    baseH: 120,
+    baseV: 2234.1,
+    baseArea: 0,  // To be calculated
+    damLength: 150,
+    streamOrder: 4,
+    drainageArea: 169.5,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S19',
+    lat: 18.66931,
+    lon: 103.62416,
+    bed: 189,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 299,
+    baseH: 110,
+    baseV: 2211.4,
+    baseArea: 0,  // To be calculated
+    damLength: 120,
+    streamOrder: 4,
+    drainageArea: 283.3,
+    hMin5: 110,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S20',
+    lat: 19.24088,
+    lon: 103.28586,
+    bed: 817,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 937,
+    baseH: 120,
+    baseV: 2194.9,
+    baseArea: 0,  // To be calculated
+    damLength: 60,
+    streamOrder: 5,
+    drainageArea: 307.0,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S21',
+    lat: 19.14317,
+    lon: 103.14901,
+    bed: 645,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 755,
+    baseH: 110,
+    baseV: 2169.7,
+    baseArea: 0,  // To be calculated
+    damLength: 90,
+    streamOrder: 4,
+    drainageArea: 171.8,
+    hMin5: 110,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S22',
+    lat: 18.71979,
+    lon: 103.35678,
+    bed: 379,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 499,
+    baseH: 120,
+    baseV: 2162.9,
+    baseArea: 0,  // To be calculated
+    damLength: 120,
+    streamOrder: 4,
+    drainageArea: 85.3,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S23',
+    lat: 19.24884,
+    lon: 103.60019,
+    bed: 1188,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1308,
+    baseH: 120,
+    baseV: 2136.9,
+    baseArea: 0,  // To be calculated
+    damLength: 90,
+    streamOrder: 3,
+    drainageArea: 53.8,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S24',
+    lat: 18.79226,
+    lon: 103.59806,
+    bed: 239,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 359,
+    baseH: 120,
+    baseV: 2114.0,
+    baseArea: 0,  // To be calculated
+    damLength: 30,
+    streamOrder: 3,
+    drainageArea: 52.0,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S25',
+    lat: 19.00199,
+    lon: 103.49807,
+    bed: 324,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 444,
+    baseH: 120,
+    baseV: 1984.6,
+    baseArea: 0,  // To be calculated
+    damLength: 120,
+    streamOrder: 4,
+    drainageArea: 494.8,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S26',
+    lat: 19.05152,
+    lon: 103.47700,
+    bed: 375,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 495,
+    baseH: 120,
+    baseV: 1976.4,
+    baseArea: 0,  // To be calculated
+    damLength: 120,
+    streamOrder: 3,
+    drainageArea: 57.1,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S27',
+    lat: 19.20671,
+    lon: 103.35566,
+    bed: 811,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 931,
+    baseH: 120,
+    baseV: 1969.9,
+    baseArea: 0,  // To be calculated
+    damLength: 180,
+    streamOrder: 4,
+    drainageArea: 82.6,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S28',
+    lat: 18.91778,
+    lon: 103.20948,
+    bed: 844,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 964,
+    baseH: 120,
+    baseV: 1912.5,
+    baseArea: 0,  // To be calculated
+    damLength: 150,
+    streamOrder: 4,
+    drainageArea: 76.2,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S29',
+    lat: 19.05969,
+    lon: 103.35190,
+    bed: 343,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 443,
+    baseH: 100,
+    baseV: 1906.0,
+    baseArea: 0,  // To be calculated
+    damLength: 30,
+    streamOrder: 4,
+    drainageArea: 156.9,
+    hMin5: 100,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S30',
+    lat: 18.74729,
+    lon: 103.56484,
+    bed: 201,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 271,
+    baseH: 70,
+    baseV: 1773.9,
+    baseArea: 0,  // To be calculated
+    damLength: 60,
+    streamOrder: 4,
+    drainageArea: 131.5,
+    hMin5: 70,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S31',
+    lat: 19.18101,
+    lon: 103.54991,
+    bed: 1127,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1247,
+    baseH: 120,
+    baseV: 1702.0,
+    baseArea: 0,  // To be calculated
+    damLength: 30,
+    streamOrder: 4,
+    drainageArea: 254.7,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S32',
+    lat: 18.75066,
+    lon: 103.59348,
+    bed: 206,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 296,
+    baseH: 90,
+    baseV: 1685.2,
+    baseArea: 0,  // To be calculated
+    damLength: 120,
+    streamOrder: 3,
+    drainageArea: 87.1,
+    hMin5: 90,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S33',
+    lat: 19.03670,
+    lon: 103.50149,
+    bed: 352,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 472,
+    baseH: 120,
+    baseV: 1675.9,
+    baseArea: 0,  // To be calculated
+    damLength: 150,
+    streamOrder: 4,
+    drainageArea: 423.2,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S34',
+    lat: 19.12568,
+    lon: 103.24872,
+    bed: 489,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 579,
+    baseH: 90,
+    baseV: 1656.2,
+    baseArea: 0,  // To be calculated
+    damLength: 60,
+    streamOrder: 5,
+    drainageArea: 440.7,
+    hMin5: 90,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S35',
+    lat: 18.65302,
+    lon: 103.61062,
+    bed: 171,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 241,
+    baseH: 70,
+    baseV: 1647.2,
+    baseArea: 0,  // To be calculated
+    damLength: 30,
+    streamOrder: 4,
+    drainageArea: 286.7,
+    hMin5: 70,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S36',
+    lat: 18.89522,
+    lon: 103.30880,
+    bed: 692,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 792,
+    baseH: 100,
+    baseV: 1615.9,
+    baseArea: 0,  // To be calculated
+    damLength: 30,
+    streamOrder: 4,
+    drainageArea: 115.5,
+    hMin5: 100,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S37',
+    lat: 18.49256,
+    lon: 103.61433,
+    bed: 165,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 225,
+    baseH: 60,
+    baseV: 1571.0,
+    baseArea: 0,  // To be calculated
+    damLength: 90,
+    streamOrder: 3,
+    drainageArea: 70.9,
+    hMin5: 60,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S38',
+    lat: 19.13979,
+    lon: 103.18307,
+    bed: 568,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 678,
+    baseH: 110,
+    baseV: 1565.6,
+    baseArea: 0,  // To be calculated
+    damLength: 30,
+    streamOrder: 4,
+    drainageArea: 216.5,
+    hMin5: 110,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S39',
+    lat: 19.23125,
+    lon: 103.58311,
+    bed: 1164,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1284,
+    baseH: 120,
+    baseV: 1485.3,
+    baseArea: 0,  // To be calculated
+    damLength: 60,
+    streamOrder: 4,
+    drainageArea: 96.5,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S40',
+    lat: 19.05356,
+    lon: 103.51139,
+    bed: 469,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 589,
+    baseH: 120,
+    baseV: 1427.5,
+    baseArea: 0,  // To be calculated
+    damLength: 180,
+    streamOrder: 4,
+    drainageArea: 419.7,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S41',
+    lat: 19.33280,
+    lon: 103.44358,
+    bed: 1088,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1158,
+    baseH: 70,
+    baseV: 1345.9,
+    baseArea: 0,  // To be calculated
+    damLength: 120,
+    streamOrder: 4,
+    drainageArea: 85.3,
+    hMin5: 70,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S42',
+    lat: 19.12751,
+    lon: 103.26824,
+    bed: 475,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 575,
+    baseH: 100,
+    baseV: 1335.4,
+    baseArea: 0,  // To be calculated
+    damLength: 120,
+    streamOrder: 5,
+    drainageArea: 467.5,
+    hMin5: 100,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S43',
+    lat: 19.25217,
+    lon: 103.25515,
+    bed: 833,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 913,
+    baseH: 80,
+    baseV: 1299.4,
+    baseArea: 0,  // To be calculated
+    damLength: 90,
+    streamOrder: 4,
+    drainageArea: 233.1,
+    hMin5: 80,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S44',
+    lat: 19.29102,
+    lon: 103.35137,
+    bed: 993,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1093,
+    baseH: 100,
+    baseV: 1267.1,
+    baseArea: 0,  // To be calculated
+    damLength: 120,
+    streamOrder: 5,
+    drainageArea: 323.8,
+    hMin5: 100,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S45',
+    lat: 19.22321,
+    lon: 103.53373,
+    bed: 1190,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1300,
+    baseH: 110,
+    baseV: 1182.7,
+    baseArea: 0,  // To be calculated
+    damLength: 60,
+    streamOrder: 3,
+    drainageArea: 58.6,
+    hMin5: 110,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S46',
+    lat: 18.61291,
+    lon: 103.59849,
+    bed: 168,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 228,
+    baseH: 60,
+    baseV: 1159.3,
+    baseArea: 0,  // To be calculated
+    damLength: 60,
+    streamOrder: 3,
+    drainageArea: 50.6,
+    hMin5: 60,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S47',
+    lat: 19.34908,
+    lon: 103.33985,
+    bed: 1076,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1126,
+    baseH: 50,
+    baseV: 1155.7,
+    baseArea: 0,  // To be calculated
+    damLength: 180,
+    streamOrder: 4,
+    drainageArea: 92.0,
+    hMin5: 50,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S48',
+    lat: 19.30053,
+    lon: 103.14537,
+    bed: 1085,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1135,
+    baseH: 50,
+    baseV: 1069.9,
+    baseArea: 0,  // To be calculated
+    damLength: 90,
+    streamOrder: 4,
+    drainageArea: 103.2,
+    hMin5: 50,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S49',
+    lat: 19.20463,
+    lon: 103.56667,
+    bed: 1159,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1279,
+    baseH: 120,
+    baseV: 938.8,
+    baseArea: 0,  // To be calculated
+    damLength: 60,
+    streamOrder: 4,
+    drainageArea: 154.1,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S50',
+    lat: 19.23034,
+    lon: 103.33057,
+    bed: 778,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 868,
+    baseH: 90,
+    baseV: 733.6,
+    baseArea: 0,  // To be calculated
+    damLength: 150,
+    streamOrder: 5,
+    drainageArea: 394.6,
+    hMin5: 90,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S51',
+    lat: 19.13431,
+    lon: 103.20289,
+    bed: 522,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 612,
+    baseH: 90,
+    baseV: 716.9,
+    baseArea: 0,  // To be calculated
+    damLength: 60,
+    streamOrder: 4,
+    drainageArea: 252.6,
+    hMin5: 90,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S52',
+    lat: 19.29815,
+    lon: 103.18190,
+    bed: 1031,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 1151,
+    baseH: 120,
+    baseV: 711.8,
+    baseArea: 0,  // To be calculated
+    damLength: 180,
+    streamOrder: 4,
+    drainageArea: 163.8,
+    hMin5: 120,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S53',
+    lat: 18.89267,
+    lon: 103.26809,
+    bed: 722,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 782,
+    baseH: 60,
+    baseV: 570.6,
+    baseArea: 0,  // To be calculated
+    damLength: 90,
+    streamOrder: 4,
+    drainageArea: 152.7,
+    hMin5: 60,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S54',
+    lat: 18.47894,
+    lon: 103.63435,
+    bed: 135,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 185,
+    baseH: 50,
+    baseV: 485.6,
+    baseArea: 0,  // To be calculated
+    damLength: 30,
+    streamOrder: 3,
+    drainageArea: 85.7,
+    hMin5: 50,
+    note: 'Auto-generated candidate site'
+  },
+  {
+    id: 'S55',
+    lat: 18.95278,
+    lon: 103.30481,
+    bed: 930,
+    region: 'Nam Ngiep Basin',
+    priority: '검토필요',
+    baseFsl: 990,
+    baseH: 60,
+    baseV: 127.0,
+    baseArea: 0,  // To be calculated
+    damLength: 60,
+    streamOrder: 4,
+    drainageArea: 66.9,
+    hMin5: 60,
+    note: 'Auto-generated candidate site'
+  },
+];
 
-export const PHASES = {
-  1: {
-    label:     '1차',
-    date:      '2026-04',
-    method:    'SRTM GL1 + flood-fill',
-    criterion: '상류 저수량 ≥ 5Mm³',
-    demSource: 'SRTM GL1 30m',
-    note:      '초기 분석. 강 중심선 재생성, 등고선 마스킹으로 범람역 제한',
+export const ANALYSIS_INFO = {
+  basin: {
+    id: 'NAM NGIEP',
+    namKo: '남 니아프',
   },
-  2: {
-    label:     '2차',
-    date:      '2026-05',
-    method:    'HydroRIVERS + 유향(NEXT_DOWN) 적용',
-    criterion: '저수량 ≥ 5Mm³ (쐐기형 근사 추정)',
-    demSource: 'HydroRIVERS / SRTM GL1 30m',
-    note:      '575개 세그먼트 → ORD_STRA≥3, ORD_FLOW≤5, ORD_CLAS≤4 필터 → 5개 선정. 소유역 미완성으로 저수량은 근사치',
-  },
-  3: {
-    label:     '3차',
-    date:      '2026-05',
-    method:    'SRTM DEM + Order-6 유향/유역 분석',
-    criterion: '집수면적 ≥ 900km², 경사 > 0.003, 저수량 ≥ 5Mm³',
-    demSource: 'SRTM GL1 30m',
-    note:      '575개 하천 세그먼트 → Order-6 필터 → 경사·집수면적 조건 → 5km 클러스터링 → T1~T9 선정',
-  },
-}
-
-export const CURRENT_PHASE = 3
-
-export const BASIN = {
-  id:              'NAM_NGIEP',
-  name:            'Nam Ngiep',
-  namKo:           '남니옙',
-  country:         'Laos',
-  totalCandidates: 23,
-  demSource:       'SRTM GL1 30m',
-  analysisDate:    '2026-05',
-  criterion:       '상류 저수량 ≥ 5Mm³',
-}
-
-// ══════════════════════════════════════════════════
-// Phase 1 — flood-fill 기반 (S1~S9)
-// ══════════════════════════════════════════════════
-const phase1Candidates = [
-  {
-    id:'S1', lat:18.44333, lon:103.58278, bed:138,
-    region:'Lower Valley', priority:'검토필요',
-    baseFsl:198, baseH:60, baseV:4834, baseArea:204.3, hMin5:40,
-    note:'저지대 계곡, H=40m부터 5Mm³ 달성. 대규모 저수 가능하나 침수 리스크 검토 필요',
-  },
-  {
-    id:'S2', lat:18.63667, lon:103.60083, bed:143,
-    region:'Lower Valley', priority:'검토필요',
-    baseFsl:203, baseH:60, baseV:5928, baseArea:222.8, hMin5:40,
-    note:'저지대 계곡, H=40m부터 5Mm³ 달성. 높은 저수 포텐셜, 하류 영향 검토 필요',
-  },
-  {
-    id:'S3', lat:18.93056, lon:103.54556, bed:329,
-    region:'Middle Basin', priority:'최우선',
-    baseFsl:389, baseH:60, baseV:3277, baseArea:110.9, hMin5:40,
-    note:'중고도 협곡형, H=40m부터 5Mm³ 달성. 댐 부지 조건 우수, 이주 영향 최소',
-  },
-  {
-    id:'S4', lat:18.78083, lon:103.51222, bed:259,
-    region:'Middle Basin', priority:'최우선',
-    baseFsl:319, baseH:60, baseV:3114, baseArea:98.2, hMin5:40,
-    note:'중고도 협곡형, H=40m부터 5Mm³ 달성. Nam Ngiep 2 계열과 유사 입지',
-  },
-  {
-    id:'S5', lat:19.03333, lon:103.40694, bed:267,
-    region:'Upper Basin', priority:'최우선',
-    baseFsl:327, baseH:60, baseV:443, baseArea:26.3, hMin5:120,
-    note:'상류 협곡형, H=120m에서 5Mm³ 달성. 높은 댐 필요, 접근성 검토 필요',
-  },
-  {
-    id:'S6', lat:19.28667, lon:103.18889, bed:989,
-    region:'Xieng Khouang Highland', priority:'2순위',
-    baseFsl:1049, baseH:60, baseV:1398, baseArea:46.6, hMin5:100,
-    note:'고원 고낙차형, H=100m에서 5Mm³ 달성. ROR 발전 적합',
-  },
-  {
-    id:'S7', lat:19.14083, lon:103.15972, bed:596,
-    region:'Xieng Khouang Highland', priority:'2순위',
-    baseFsl:656, baseH:60, baseV:1371, baseArea:44.6, hMin5:120,
-    note:'고원 고낙차형, H=120m에서 5Mm³ 달성. 발전 효율 우수',
-  },
-  {
-    id:'S9', lat:19.20722, lon:103.53750, bed:1144,
-    region:'Xieng Khouang Highland', priority:'2순위',
-    baseFsl:1204, baseH:60, baseV:2114, baseArea:73.3, hMin5:90,
-    note:'고원지대, H=90m에서 5Mm³ 달성. 접근성 불량',
-  },
-  // S8: H=120m에서도 4.88Mm³ 미달 → 제외
-]
-
-// ══════════════════════════════════════════════════
-// Phase 2 — HydroRIVERS + 유향 적용 (C1~C5)
-// bed / baseFsl / baseArea: 소유역 미완성으로 null
-// ProfileChart / floodPolygons 데이터 없음 → 안전 처리
-// ══════════════════════════════════════════════════
-const phase2Candidates = [
-  {
-    id:'C1', lat:18.4083, lon:103.5937,
-    bed:null, baseFsl:null, baseH:60, baseV:14.7, baseArea:null, hMin5:20,
-    region:'Lower Valley', priority:'최우선',
-    storage_H20:5.0, storage_H30:9.7, storage_H50:23.5, storage_H80:55.2,
-    upland_skm:4515, dis_av_cms:135.3, ord_flow:4, ord_stra:5,
-    note:'ORD_FLOW=4 대하천. H=20m에서 5Mm³ 달성. 집수면적 4,515km², 유량 135m³/s',
-  },
-  {
-    id:'C2', lat:18.6396, lon:103.6021,
-    bed:null, baseFsl:null, baseH:60, baseV:13.7, baseArea:null, hMin5:30,
-    region:'Lower Valley', priority:'최우선',
-    storage_H20:4.7, storage_H30:9.1, storage_H50:22.2, storage_H80:52.4,
-    upland_skm:4150, dis_av_cms:117.5, ord_flow:4, ord_stra:5,
-    note:'ORD_FLOW=4 대하천. H=30m에서 5Mm³ 달성. 집수면적 4,150km², 유량 117m³/s',
-  },
-  {
-    id:'C3', lat:18.7604, lon:103.4312,
-    bed:null, baseFsl:null, baseH:60, baseV:11.7, baseArea:null, hMin5:30,
-    region:'Middle Basin', priority:'최우선',
-    storage_H20:4.0, storage_H30:7.8, storage_H50:19.4, storage_H80:46.4,
-    upland_skm:3386, dis_av_cms:84.9, ord_flow:5, ord_stra:5,
-    note:'ORD_FLOW=5 중간하천. H=30m에서 5Mm³ 달성. 집수면적 3,386km², 유량 84m³/s',
-  },
-  {
-    id:'C4', lat:18.9812, lon:103.4896,
-    bed:null, baseFsl:null, baseH:60, baseV:9.5, baseArea:null, hMin5:30,
-    region:'Middle Basin', priority:'2순위',
-    storage_H20:3.1, storage_H30:6.2, storage_H50:15.8, storage_H80:38.3,
-    upland_skm:2444, dis_av_cms:49.8, ord_flow:5, ord_stra:5,
-    note:'ORD_FLOW=5 중간하천. H=30m에서 5Mm³ 달성. 집수면적 2,444km², 유량 49m³/s',
-  },
-  {
-    id:'C5', lat:19.1687, lon:103.3562,
-    bed:null, baseFsl:null, baseH:60, baseV:5.5, baseArea:null, hMin5:50,
-    region:'Upper Basin', priority:'2순위',
-    storage_H20:1.7, storage_H30:3.5, storage_H50:9.1, storage_H80:22.4,
-    upland_skm:908, dis_av_cms:17.8, ord_flow:5, ord_stra:4,
-    note:'ORD_FLOW=5 상류 소하천. H=50m에서 5Mm³ 달성. 집수면적 908km², 유량 17m³/s',
-  },
-]
-
-// Phase 3 — 소유역 완성 후 추가
-const phase3Candidates = [
-  {
-    id:'T1', lat:18.5847, lon:103.60487,
-    bed:161, baseFsl:null, baseH:60, baseV:23.7, baseArea:null, hMin5:30,
-    region:'Lower Valley', priority:'2순위',
-    storage_H20:3.8, storage_H30:8.5, storage_H50:23.7, storage_H80:60.6,
-    upland_skm:4114, slope:0.00392, ord_stra:6, linkno:2686,
-    note:'Order-6 메인하천 (LINKNO=2686). 경사=0.0039, 집수면적=4,114km². H=30m에서 5Mm³ 달성.',
-  },
-  {
-    id:'T2', lat:18.64993, lon:103.56365,
-    bed:171, baseFsl:null, baseH:60, baseV:21.1, baseArea:null, hMin5:30,
-    region:'Lower Valley', priority:'2순위',
-    storage_H20:3.4, storage_H30:7.6, storage_H50:21.1, storage_H80:53.9,
-    upland_skm:3663, slope:0.00438, ord_stra:6, linkno:2674,
-    note:'Order-6 메인하천 (LINKNO=2674). 경사=0.0044, 집수면적=3,663km². H=30m에서 5Mm³ 달성.',
-  },
-  {
-    id:'T3', lat:18.64763, lon:103.51382,
-    bed:204, baseFsl:null, baseH:60, baseV:20.8, baseArea:null, hMin5:30,
-    region:'Lower Valley', priority:'최우선',
-    storage_H20:3.3, storage_H30:7.5, storage_H50:20.8, storage_H80:53.3,
-    upland_skm:3619, slope:0.01614, ord_stra:6, linkno:2671,
-    note:'Order-6 메인하천 (LINKNO=2671). 경사=0.0161, 집수면적=3,619km². H=30m에서 5Mm³ 달성.',
-  },
-  {
-    id:'T4', lat:18.67646, lon:103.46457,
-    bed:224, baseFsl:null, baseH:60, baseV:20.6, baseArea:null, hMin5:30,
-    region:'Lower Valley', priority:'최우선',
-    storage_H20:3.3, storage_H30:7.4, storage_H50:20.6, storage_H80:52.8,
-    upland_skm:3587, slope:0.01755, ord_stra:6, linkno:2661,
-    note:'Order-6 메인하천 (LINKNO=2661). 경사=0.0175, 집수면적=3,587km². H=30m에서 5Mm³ 달성.',
-  },
-  {
-    id:'T5', lat:18.71776, lon:103.4384,
-    bed:238, baseFsl:null, baseH:60, baseV:19.2, baseArea:null, hMin5:30,
-    region:'Lower Valley', priority:'2순위',
-    storage_H20:3.1, storage_H30:6.9, storage_H50:19.2, storage_H80:49.1,
-    upland_skm:3338, slope:0.00823, ord_stra:6, linkno:2650,
-    note:'Order-6 메인하천 (LINKNO=2650). 경사=0.0082, 집수면적=3,338km². H=30m에서 5Mm³ 달성.',
-  },
-  {
-    id:'T6', lat:18.82496, lon:103.42451,
-    bed:246, baseFsl:null, baseH:60, baseV:15.9, baseArea:null, hMin5:30,
-    region:'Middle Basin', priority:'2순위',
-    storage_H20:2.5, storage_H30:5.7, storage_H50:15.9, storage_H80:40.6,
-    upland_skm:2760, slope:0.0049, ord_stra:6, linkno:2634,
-    note:'Order-6 메인하천 (LINKNO=2634). 경사=0.0049, 집수면적=2,760km². H=30m에서 5Mm³ 달성.',
-  },
-  {
-    id:'T7', lat:18.86429, lon:103.45685,
-    bed:262, baseFsl:null, baseH:60, baseV:15.3, baseArea:null, hMin5:30,
-    region:'Middle Basin', priority:'2순위',
-    storage_H20:2.5, storage_H30:5.5, storage_H50:15.3, storage_H80:39.2,
-    upland_skm:2665, slope:0.00641, ord_stra:6, linkno:2627,
-    note:'Order-6 메인하천 (LINKNO=2627). 경사=0.0064, 집수면적=2,665km². H=30m에서 5Mm³ 달성.',
-  },
-  {
-    id:'T8', lat:19.07826, lon:103.34716,
-    bed:327, baseFsl:null, baseH:60, baseV:8.9, baseArea:null, hMin5:50,
-    region:'Upper Basin', priority:'검토필요',
-    storage_H20:1.4, storage_H30:3.2, storage_H50:8.9, storage_H80:22.8,
-    upland_skm:1552, slope:0.00424, ord_stra:6, linkno:2591,
-    note:'Order-6 메인하천 (LINKNO=2591). 경사=0.0042, 집수면적=1,552km². H=50m에서 5Mm³ 달성.',
-  },
-  {
-    id:'T9', lat:19.14041, lon:103.33477,
-    bed:395, baseFsl:null, baseH:60, baseV:5.3, baseArea:null, hMin5:50,
-    region:'Upper Basin', priority:'검토필요',
-    storage_H20:0.9, storage_H30:1.9, storage_H50:5.3, storage_H80:13.6,
-    upland_skm:924, slope:0.03221, ord_stra:6, linkno:2580,
-    note:'Order-6 메인하천 (LINKNO=2580). 경사=0.0322, 집수면적=924km². H=50m에서 5Mm³ 달성.',
-  },
-]
-
-const PHASE_CANDIDATES = {
-  1: phase1Candidates,
-  2: phase2Candidates,
-  3: phase3Candidates,
-}
-
-export const getCandidatesByPhase = (phase) => PHASE_CANDIDATES[phase] ?? []
-
-// 하위 호환 (기존 코드가 직접 참조하는 경우)
-export const candidates = phase3Candidates
-
-// ── 저수량 추정 ───────────────────────────────────
-// Phase 2(C1~C5): 시나리오 직접 보간
-// Phase 1(S1~S9): H^2.5 스케일링
-export const estimateVolume = (c, h) => {
-  if (c.storage_H20 !== undefined) {
-    const pts = [[20,c.storage_H20],[30,c.storage_H30],[50,c.storage_H50],[80,c.storage_H80]]
-    for (let i = 0; i < pts.length - 1; i++) {
-      const [h0,v0] = pts[i], [h1,v1] = pts[i+1]
-      if (h >= h0 && h <= h1)
-        return Math.round((v0 + (v1-v0)*(h-h0)/(h1-h0)) * 10) / 10
-    }
-    if (h < 20) return Math.round(c.storage_H20 * Math.pow(h/20, 2.5) * 10) / 10
-    return Math.round(c.storage_H80 * Math.pow(h/80, 2.5) * 10) / 10
-  }
-  return Math.round(c.baseV * Math.pow(h / c.baseH, 2.5))
-}
-
-// null-safe 헬퍼들
-export const estimateArea   = (c, h) =>
-  c.baseArea != null ? Math.round(c.baseArea * Math.pow(h / c.baseH, 1.8) * 10) / 10 : null
-
-export const calcFsl        = (c, h) =>
-  c.bed != null ? c.bed + h : null
-
-export const calcEfficiency = (v, a) =>
-  (v != null && a != null && a !== 0) ? Math.round((v / a) * 100) / 100 : null
-
-export const estimateEvap   = (a) =>
-  a != null ? Math.round(a * 1.5 * 10) / 10 : null
+  demSource: 'SRTM GL1 30m',
+  method: 'Flood-fill + Cross Profile',
+  analysisDate: '2026-05-13',
+  criterion: '저수량 ≥ 5 Mm³',
+};
 
 export const PRIORITY_CONFIG = {
-  '최우선':  { color: '#1D9E75', bg: '#E1F5EE' },
-  '2순위':   { color: '#1A7FBD', bg: '#E6F1FB' },
-  '검토필요':{ color: '#BA7517', bg: '#FAEEDA' },
+  '최우선': { color: '#00C4B4' },
+  '우선':   { color: '#1D9E75' },
+  '검토필요': { color: '#BA7517' },
+  '보류':   { color: '#E05C5C' },
+};
+
+export const HEIGHT_STEPS = [40, 50, 60, 70, 80, 90, 100, 110, 120];
+
+export function calcFsl(c, h) {
+  return c.bed != null ? c.bed + h : null;
 }
 
-export const HEIGHT_STEPS = [40, 50, 60, 70, 80, 90, 100, 110, 120]
+export function estimateVolume(c, h) {
+  if (!c.baseV || !c.baseH) return 0;
+  const ratio = h / c.baseH;
+  return Math.round(c.baseV * Math.pow(ratio, 2.5) * 10) / 10;
+}
+
+export function estimateArea(c, h) {
+  if (!c.baseArea || c.baseArea === 0) return null;
+  const ratio = h / c.baseH;
+  return Math.round(c.baseArea * Math.pow(ratio, 2) * 10) / 10;
+}
+
+export function calcEfficiency(v, a) {
+  if (!v || !a) return null;
+  return Math.round((v / a) * 10) / 10;
+}
+
+export function estimateEvap(a) {
+  if (!a) return null;
+  return Math.round(a * 1.5 * 10) / 10;
+}
