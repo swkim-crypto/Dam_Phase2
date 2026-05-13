@@ -159,18 +159,20 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
     const bottomWidth = halfLenDeg * 0.5
     const height = 0.0003 // 약간의 세로 크기
 
-    const positions = [
-      Cesium.Cartesian3.fromDegrees(selected.lon - topWidth, selected.lat + height/2, 0),
-      Cesium.Cartesian3.fromDegrees(selected.lon + topWidth, selected.lat + height/2, 0),
-      Cesium.Cartesian3.fromDegrees(selected.lon + bottomWidth, selected.lat - height/2, 0),
-      Cesium.Cartesian3.fromDegrees(selected.lon - bottomWidth, selected.lat - height/2, 0),
-    ]
+    const linePositions = Cesium.Cartesian3.fromDegreesArray([
+      selected.lon - topWidth, selected.lat + height/2,
+      selected.lon + topWidth, selected.lat + height/2,
+      selected.lon + bottomWidth, selected.lat - height/2,
+      selected.lon - bottomWidth, selected.lat - height/2,
+      selected.lon - topWidth, selected.lat + height/2,
+    ])
 
     const entity = viewer.entities.add({
-      polygon: {
-        hierarchy: { positions },
-        material: Cesium.Color.fromCssColorString(cfg.color).withAlpha(0.7),
-        height: 0,
+      polyline: {
+        positions: linePositions,
+        width: 3,
+        material: Cesium.Color.fromCssColorString(cfg.color).withAlpha(0.9),
+        clampToGround: true,
       }
     })
 
@@ -184,7 +186,7 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
 
     // 기존 수몰 폴리곤 제거
     if (entitiesRef.current.floodPolygon) {
-      viewer.entities.remove(entitiesRef.current.floodPolygon)
+      viewer.dataSources.remove(entitiesRef.current.floodPolygon)
       entitiesRef.current.floodPolygon = null
     }
 
@@ -193,18 +195,21 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
     if (!polyData) return
 
     try {
-      // GeoJSON 좌표를 Cesium Cartesian3 배열로 변환
-      const coordinates = polyData.coordinates[0] // Polygon 첫 번째 링
-      const positions = coordinates.map(coord => 
-        Cesium.Cartesian3.fromDegrees(coord[0], coord[1], 0)
-      )
+      // GeoJSON으로 직접 로드
+      const geoJson = {
+        type: 'Feature',
+        geometry: polyData,
+        properties: {}
+      }
 
-      const entity = viewer.entities.add({
-        polygon: {
-          hierarchy: { positions },
-          material: Cesium.Color.fromCssColorString('#1e78ff').withAlpha(0.35),
-          height: 0,
-        }
+      Cesium.GeoJsonDataSource.load(geoJson, {
+        fill: Cesium.Color.fromCssColorString('#1e78ff').withAlpha(0.35),
+        stroke: Cesium.Color.fromCssColorString('#1a7fbd'),
+        strokeWidth: 2,
+        clampToGround: true,
+      }).then(dataSource => {
+        viewer.dataSources.add(dataSource)
+        entitiesRef.current.floodPolygon = dataSource
       })
 
       entitiesRef.current.floodPolygon = entity
