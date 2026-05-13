@@ -13,7 +13,7 @@ let floodPolygonsCache = null
 async function loadFloodPolygons() {
   if (floodPolygonsCache) return floodPolygonsCache
   try {
-    const module = await import('../data/floods.js')
+    const module = await import('../data/floodPolygons.js')
     floodPolygonsCache = module.floodPolygons
     console.log('✅ Flood polygons loaded')
     return floodPolygonsCache

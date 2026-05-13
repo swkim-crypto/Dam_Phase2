@@ -3,15 +3,11 @@ import Sidebar from './components/Sidebar.jsx'
 import DetailPanel from './components/DetailPanel.jsx'
 import MapView from './components/MapView.jsx'
 import Header from './components/Header.jsx'
-import { getCandidatesByPhase, CURRENT_PHASE } from './data/candidates.js'
+import { candidates } from './data/candidates.js'
 
 export default function App() {
-  const [phase, setPhase] = useState(CURRENT_PHASE)
-  const candidates = getCandidatesByPhase(phase)
-
-  const [selected, setSelected] = useState(() => getCandidatesByPhase(CURRENT_PHASE)[0])
+  const [selected, setSelected] = useState(candidates[0])
   const [heightM, setHeightM] = useState(60)
-  // 초기값 false: 후보지 선택 후 버튼 눌러야 수몰 표시
   const [floodVisible, setFloodVisible] = useState(false)
 
   const handleFloodToggle = () => setFloodVisible(v => !v)
@@ -19,28 +15,17 @@ export default function App() {
   const handleSelect = (c) => {
     setSelected(c)
     setHeightM(60)
-    setFloodVisible(false)  // 후보지 바꾸면 수몰 초기화
-  }
-
-  const handlePhaseChange = (newPhase) => {
-    setPhase(newPhase)
-    const next = getCandidatesByPhase(newPhase)
-    const same = next.find(c => c.id === selected?.id)
-    setSelected(same ?? next[0])
-    setHeightM(60)
     setFloodVisible(false)
   }
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden', background:'var(--bg-deep)' }}>
-      <Header phase={phase} />
+      <Header />
       <div style={{ display:'flex', flex:1, overflow:'hidden' }}>
         <Sidebar
           candidates={candidates}
           selected={selected}
           onSelect={handleSelect}
-          phase={phase}
-          onPhaseChange={handlePhaseChange}
         />
         <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
           <MapView
