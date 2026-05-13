@@ -5,7 +5,7 @@ import { damLengths } from '../data/damLengths.js'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 
 // Cesium 기본 설정
-Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI5N2UyMjcwOS00MDY1LTQxYjEtYjZjMy00YTU0ZTg1YmJjMGIiLCJpZCI6ODAzMDYsImlhdCI6MTY0Mjc0ODI2MX0.dkwAL1CcljUV7NA7fDbhXXnmyZQU_c-G5zRx8PtEcxE'
+Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4Mjk5MGFiMi1kNmQ4LTQ4MjQtOWQ0MC0yMjQxYTA4ZDk1MDciLCJpZCI6MjU4NTY1LCJzdWIiOiJLaW0gU2VvbmcgV29vayIsImlzcyI6Imh0dHBzOi8vaW9uLmNlc2l1bS5jb20iLCJhdWQiOiJLaW0gU2VvbmcgV29va19kZWZhdWx0IiwiaWF0IjoxNzc4NjU2NzE4fQ.Drc4962t4zSjH1BnBDF1wLK5RrangCBnPVpCPmB8a2Q'
 
 // 동적 로딩: 필요할 때만 floodPolygons 로드
 let floodPolygonsCache = null
@@ -168,11 +168,9 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
 
     const entity = viewer.entities.add({
       polygon: {
-        hierarchy: positions,
+        hierarchy: { positions },
         material: Cesium.Color.fromCssColorString(cfg.color).withAlpha(0.7),
-        outline: false,
         height: 0,
-        classificationType: Cesium.ClassificationType.TERRAIN
       }
     })
 
@@ -203,11 +201,9 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
 
       const entity = viewer.entities.add({
         polygon: {
-          hierarchy: positions,
+          hierarchy: { positions },
           material: Cesium.Color.fromCssColorString('#1e78ff').withAlpha(0.35),
-          outline: false,
           height: 0,
-          classificationType: Cesium.ClassificationType.TERRAIN
         }
       })
 
