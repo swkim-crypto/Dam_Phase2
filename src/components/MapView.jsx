@@ -45,7 +45,7 @@ export default function MapView({ candidates, selected, heightM, onSelect, flood
     if (viewerRef.current || !cesiumContainer.current) return
 
     const viewer = new Cesium.Viewer(cesiumContainer.current, {
-      terrainProvider: Cesium.createWorldTerrain(),
+      terrain: new Cesium.Terrain(Cesium.CesiumTerrainProvider.fromIonAssetId(1)),
       baseLayerPicker: false,
       geocoder: false,
       homeButton: false,
